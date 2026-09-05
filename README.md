@@ -1,5 +1,39 @@
 # PG Ledger
 
+## Version: 2026.9.0
+
+**Release Date:** September 5, 2026
+
+### What's New in 2026.9
+
+#### Critical Bug Fixes
+- ✅ Fixed overpayment logic - displays "Overpaid by ₹X"
+- ✅ Enhanced duplicate room validation
+- ✅ Implemented carryover rent from previous months
+- ✅ Fixed getDaysOverdue to use actual rent_due_day
+
+#### New Features
+- ✅ Occupancy tracking dashboard (floor-by-floor breakdown)
+- ✅ Financial summary page (monthly reports, collection rates)
+- ✅ Pagination for large datasets (tenants, rent charges, transactions)
+- ✅ "Due" status (yellow) for rent due today vs "Overdue Xd" (red)
+- ✅ "Notice" filter tab for tenants who gave notice to vacate
+- ✅ Empty rooms display showing vacant beds
+- ✅ Payment status in mobile view instead of tenant status
+
+#### Enhancements
+- Enhanced form validation and error handling
+- Better sorting indicators with ↑↓ arrows
+- Monthly statistics for accounts (income/expense)
+- Responsive mobile design improvements
+- Dark mode CSS support
+
+**Branch:** `release/2026.9` | **Next Release:** Every Sunday to main
+
+---
+
+
+
 A tenant / rent / accounts management app for a single-owner PG (paying-guest)
 property with ~80 tenants across multiple floors. Built to the "Ledger" UI
 direction you picked, and to the CRUD rules we designed — most importantly,
