@@ -105,8 +105,13 @@ const server = http.createServer(async (req, res) => {
     }
     if (path === "/floors" && req.method === "POST") {
       const form = await parseForm(req);
-      await repo.createFloor({ name: form.name, sortOrder: 99 });
-      return redirect(res, "/floors");
+      try {
+        await repo.createFloor({ name: form.name, sortOrder: 99 });
+        return redirect(res, "/floors");
+      } catch (e) {
+        const body = await floorsPage();
+        return sendHtml(res, 200, layout({ title: "Floors & Rooms", active: "/floors", user, body, flash: { kind: "bad", text: e.message } }));
+      }
     }
     const floorEditMatch = path.match(/^\/floors\/(\d+)\/edit$/);
     if (floorEditMatch && req.method === "POST") {
@@ -132,8 +137,13 @@ const server = http.createServer(async (req, res) => {
     }
     if (path === "/floors/rooms" && req.method === "POST") {
       const form = await parseForm(req);
-      await repo.createRoom({ floorId: form.floorId, roomNo: form.roomNo, sharingType: form.sharingType, defaultRent: form.defaultRent });
-      return redirect(res, "/floors");
+      try {
+        await repo.createRoom({ floorId: form.floorId, roomNo: form.roomNo, sharingType: form.sharingType, defaultRent: form.defaultRent });
+        return redirect(res, "/floors");
+      } catch (e) {
+        const body = await floorsPage();
+        return sendHtml(res, 200, layout({ title: "Floors & Rooms", active: "/floors", user, body, flash: { kind: "bad", text: e.message } }));
+      }
     }
     const roomEditMatch = path.match(/^\/floors\/rooms\/(\d+)\/edit$/);
     if (roomEditMatch && req.method === "POST") {
@@ -397,8 +407,13 @@ const server = http.createServer(async (req, res) => {
     }
     if (path === "/accounts" && req.method === "POST") {
       const form = await parseForm(req);
-      await repo.createAccount({ name: form.name, type: form.type, openingBalance: form.openingBalance });
-      return redirect(res, "/accounts");
+      try {
+        await repo.createAccount({ name: form.name, type: form.type, openingBalance: form.openingBalance });
+        return redirect(res, "/accounts");
+      } catch (e) {
+        const body = await accountsPage();
+        return sendHtml(res, 200, layout({ title: "Accounts", active: "/accounts", user, body, flash: { kind: "bad", text: e.message } }));
+      }
     }
     const acctEditMatch = path.match(/^\/accounts\/(\d+)\/edit$/);
     if (acctEditMatch && req.method === "POST") {
@@ -443,8 +458,13 @@ const server = http.createServer(async (req, res) => {
     }
     if (path === "/expenses" && req.method === "POST") {
       const form = await parseForm(req);
-      await repo.createExpense({ accountId: form.accountId, category: form.category, amount: form.amount, expenseDate: form.expenseDate, note: form.note });
-      return redirect(res, "/expenses");
+      try {
+        await repo.createExpense({ accountId: form.accountId, category: form.category, amount: form.amount, expenseDate: form.expenseDate, note: form.note });
+        return redirect(res, "/expenses");
+      } catch (e) {
+        const body = await expensesPage({ accountId: form.accountId });
+        return sendHtml(res, 200, layout({ title: "Expenses", active: "/expenses", user, body, flash: { kind: "bad", text: e.message } }));
+      }
     }
     const expEditMatch = path.match(/^\/expenses\/(\d+)\/edit$/);
     if (expEditMatch && req.method === "POST") {
