@@ -9,6 +9,7 @@ export async function dashboardPage() {
 
   await repo.ensureChargesForMonth(year, month);
 
+  const emptyRooms = await repo.getEmptyRooms();
   const kpis = await repo.dashboardKpis(year, month);
   const floors = await repo.floorPerformance(year, month);
   const payments = await repo.recentPayments(6);
@@ -122,6 +123,23 @@ export async function dashboardPage() {
           ${noticeRows}
         </div>
       </div>
+    </div>
+
+    <div class="card" style="padding:18px 20px;margin-bottom:20px;">
+      <h2>🏢 Available Beds</h2>
+      ${emptyRooms.length ? `
+        <table class="responsive" style="font-size:13.5px;">
+          <thead><tr><th>Floor</th><th>Room</th><th class="num">Empty</th><th class="num">Rent</th></tr></thead>
+          <tbody>
+            ${emptyRooms.map((r) => `<tr>
+              <td data-label="Floor">${escapeHtml(r.floor_name)}</td>
+              <td data-label="Room">${escapeHtml(r.room_no)}</td>
+              <td class="num" data-label="Empty">${r.empty_beds}/${r.sharing_type}</td>
+              <td class="num" data-label="Rent">${money(r.default_rent)}</td>
+            </tr>`).join("")}
+          </tbody>
+        </table>
+      ` : `<div style="color:var(--ink-soft);font-size:13.5px;">All beds are occupied!</div>`}
     </div>
 
     <div class="stack-row">

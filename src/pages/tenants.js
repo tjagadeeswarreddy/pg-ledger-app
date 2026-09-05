@@ -222,24 +222,6 @@ export async function tenantsListPage({ status = "active", floorId, roomId, sear
       </div>
     </div>
  
-    ${emptyRooms.length ? `
-    <div style="margin-top:20px;">
-      <h2 style="font-size:15px;margin-bottom:10px;font-weight:600;">💼 Available Beds</h2>
-      <div class="card" style="padding:6px 20px;">
-        <table class="responsive">
-          <thead><tr><th>Floor</th><th>Room</th><th class="num">Empty Beds</th><th class="num">Rent</th></tr></thead>
-          <tbody>
-            ${emptyRooms.map((r) => `
-            <tr>
-              <td data-label="Floor">${escapeHtml(r.floor_name)}</td>
-              <td data-label="Room">${escapeHtml(r.room_no)}</td>
-              <td class="num" data-label="Empty Beds"><strong>${r.empty_beds}</strong>/${r.sharing_type}</td>
-              <td class="num" data-label="Rent">${money(r.default_rent)}</td>
-            </tr>`).join("")}
-          </tbody>
-        </table>
-      </div>
-    </div>` : ""}
     `
 }
 
