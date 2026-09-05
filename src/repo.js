@@ -794,12 +794,13 @@ export async function getDaysOverdue(chargeId) {
   if (!charge || charge.status !== 'active' || Number(charge.paid_amount) > 0) return 0;
   
   // Calculate days since the actual due day of the month
+  // Returns negative if due date is in future, 0 if due today, positive if overdue
   const dueDay = Number(charge.rent_due_day) || 1;
   const dueDate = new Date(Number(charge.period_year), Number(charge.period_month) - 1, dueDay);
   const today = new Date();
   const daysOverdue = Math.floor((today - dueDate) / (1000 * 60 * 60 * 24));
   
-  return Math.max(0, daysOverdue);
+  return daysOverdue;
 }
 
 export async function getAccountMonthlyStats(accountId) {

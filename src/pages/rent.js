@@ -56,10 +56,19 @@ export async function rentPage({ year, month, floorId }) {
     else if (outstanding === 0) statusPill = pill("Paid", "good");
     else if (paid > 0) statusPill = pill("Partial", "warn");
     else {
-      // outstanding > 0 and paid === 0 - show overdue with days indicator
+      // outstanding > 0 and paid === 0 - show status based on due date
       const daysOverdue = daysOverdueMap[c.id] || 0;
-      const label = daysOverdue > 0 ? `Overdue ${daysOverdue}d` : "Overdue";
-      statusPill = pill(label, "bad");
+      if (daysOverdue > 0) {
+        // Past due date
+        const label = `Overdue ${daysOverdue}d`;
+        statusPill = pill(label, "bad");
+      } else if (daysOverdue === 0) {
+        // Due today
+        statusPill = pill("Due", "warn");
+      } else {
+        // Due in future
+        statusPill = pill("Not due", "neutral");
+      }
     }
 
     const adjustedNote = hasValue(c.original_amount) && Number(c.original_amount) !== exp
