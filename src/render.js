@@ -516,7 +516,8 @@ export const BASE_CSS = `
     .bottombar { display:flex; }
     .drawer-overlay { display:block; }
     .drawer-panel { display:flex; }
-    .grid2, .grid3, .grid4 { grid-template-columns: 1fr; }
+    .grid2, .grid3 { grid-template-columns: 1fr; }
+    .grid4 { grid-template-columns: repeat(2, 1fr); }
     .stack-row { flex-direction:column; }
     .stack-row > * { width:100%; }
 

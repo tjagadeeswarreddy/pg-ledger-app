@@ -79,6 +79,9 @@ export async function dashboardPage() {
       <div style="text-align:right;"><div class="mono" style="font-size:13px;">${money(p.amount)}</div><div class="lbl">${p.pay_date}</div></div>
     </div>`).join("") : `<div style="color:var(--ink-faint);font-size:13px;padding:8px 0;">No payments recorded yet this month.</div>`;
 
+  // Filter to show only vacant beds (empty_beds > 0)
+  const vacantBeds = emptyRooms.filter((r) => r.empty_beds > 0);
+
   const body = `
     <div class="toolbar">
       <div>
@@ -125,23 +128,6 @@ export async function dashboardPage() {
       </div>
     </div>
 
-    <div class="card" style="padding:18px 20px;margin-bottom:20px;">
-      <h2>🏢 Available Beds</h2>
-      ${emptyRooms.length ? `
-        <table class="responsive" style="font-size:13.5px;">
-          <thead><tr><th>Floor</th><th>Room</th><th class="num">Empty</th><th class="num">Rent</th></tr></thead>
-          <tbody>
-            ${emptyRooms.map((r) => `<tr>
-              <td data-label="Floor">${escapeHtml(r.floor_name)}</td>
-              <td data-label="Room">${escapeHtml(r.room_no)}</td>
-              <td class="num" data-label="Empty">${r.empty_beds}/${r.sharing_type}</td>
-              <td class="num" data-label="Rent">${money(r.default_rent)}</td>
-            </tr>`).join("")}
-          </tbody>
-        </table>
-      ` : `<div style="color:var(--ink-soft);font-size:13.5px;">All beds are occupied!</div>`}
-    </div>
-
     <div class="stack-row">
       <div class="card" style="flex:1.5;padding:18px 20px;">
         <h2>Floor performance</h2>
@@ -155,6 +141,47 @@ export async function dashboardPage() {
         ${paymentRows}
       </div>
     </div>
+
+    <div class="card" style="padding:12px 14px;margin-top:20px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="margin:0;font-size:14px;">Vacant Beds${vacantBeds.length ? ` (${vacantBeds.length})` : ""}</h3>
+        <button onclick="toggleVacantBeds()" style="background:none;border:none;cursor:pointer;color:var(--ink-soft);font-size:14px;padding:4px 8px;">
+          <span id="vacant-toggle-icon">−</span>
+        </button>
+      </div>
+      <div id="vacant-beds-content" style="margin-top:10px;">
+        ${vacantBeds.length ? `
+          <table class="responsive" style="font-size:12px;">
+            <thead><tr><th>Floor</th><th>Room</th><th class="num">Empty</th><th class="num">Rent</th></tr></thead>
+            <tbody>
+              ${vacantBeds.map((r) => `<tr>
+                <td data-label="Floor">${escapeHtml(r.floor_name)}</td>
+                <td data-label="Room">${escapeHtml(r.room_no)}</td>
+                <td class="num" data-label="Empty">${r.empty_beds}/${r.sharing_type}</td>
+                <td class="num" data-label="Rent">${money(r.default_rent)}</td>
+              </tr>`).join("")}
+            </tbody>
+          </table>
+        ` : `<div style="color:var(--ink-faint);font-size:12px;">All beds are occupied!</div>`}
+      </div>
+    </div>
+
+    <script>
+      function toggleVacantBeds() {
+        const content = document.getElementById('vacant-beds-content');
+        const icon = document.getElementById('vacant-toggle-icon');
+        const isHidden = content.style.display === 'none';
+        content.style.display = isHidden ? 'block' : 'none';
+        icon.textContent = isHidden ? '−' : '+';
+        localStorage.setItem('vacantBedsCollapsed', isHidden ? '0' : '1');
+      }
+
+      // Load saved state
+      if (localStorage.getItem('vacantBedsCollapsed') === '1') {
+        document.getElementById('vacant-beds-content').style.display = 'none';
+        document.getElementById('vacant-toggle-icon').textContent = '+';
+      }
+    </script>
   `;
   return body;
 }
