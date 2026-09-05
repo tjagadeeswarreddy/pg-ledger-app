@@ -22,9 +22,17 @@ export async function tenantsListPage({ status = "active", floorId, roomId, sear
   const year = today.getFullYear();
   const month = today.getMonth() + 1;
   const paymentStatus = {};
+  const daysOverdueMap = {}; // Track days overdue for each tenant
   for (const t of tenants) {
     if (t.status === "active" || t.status === "vacated") {
-      paymentStatus[t.id] = await repo.getPaymentStatusForTenant(t.id, year, month);
+      const status = await repo.getPaymentStatusForTenant(t.id, year, month);
+      paymentStatus[t.id] = status;
+      
+      // Fetch the charge to get days overdue information
+      const charge = await repo.getChargeForTenant(t.id, year, month);
+      if (charge) {
+        daysOverdueMap[t.id] = await repo.getDaysOverdue(charge.id);
+      }
     }
   }
 
@@ -57,9 +65,26 @@ export async function tenantsListPage({ status = "active", floorId, roomId, sear
   // — see BASE_CSS) to avoid showing the room twice; desktop is unaffected.
   const rows = tenants.map((t) => {
     const payStatus = paymentStatus[t.id] || "—";
+    const daysOverdue = daysOverdueMap[t.id];
     let payStatusClass = "";
-    if (payStatus === "Paid") payStatusClass = "good";
-    if (payStatus === "Overdue") payStatusClass = "bad";
+    let displayPayStatus = payStatus;
+    
+    if (payStatus === "Paid") {
+      payStatusClass = "good";
+    } else if (payStatus === "Partial") {
+      payStatusClass = "warn";
+      displayPayStatus = "Partial";
+    } else if (payStatus.startsWith("Overdue") || (daysOverdue !== undefined && daysOverdue > 0)) {
+      payStatusClass = "bad";
+      const days = daysOverdue || 0;
+      displayPayStatus = `Overdue ${days}d`;
+    } else if (daysOverdue === 0) {
+      payStatusClass = "warn";
+      displayPayStatus = "Due";
+    } else if (daysOverdue !== undefined && daysOverdue < 0) {
+      payStatusClass = "neutral";
+      displayPayStatus = "Not due";
+    }
     return `
     <tr>
       <td data-label="Name" class="card-id-cell">
@@ -94,7 +119,32 @@ export async function tenantsListPage({ status = "active", floorId, roomId, sear
       <div class="tcard">
         <div class="tcard-row1">
           <a href="/tenants/${t.id}" class="tcard-name">${escapeHtml(t.full_name)}</a>
-          <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;">${paymentStatus[t.id] ? pill(paymentStatus[t.id], paymentStatus[t.id] === "Paid" ? "good" : paymentStatus[t.id] === "Partial" ? "warn" : "bad") : "—"}${whatsappLink(t.phone)}${deleteBtn}</span>
+          <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;">${(() => {
+          const status = paymentStatus[t.id];
+          const daysOverdue = daysOverdueMap[t.id];
+          let color = "neutral";
+          let label = "—";
+          
+          if (status === "Paid") {
+            color = "good";
+            label = "Paid";
+          } else if (status === "Partial") {
+            color = "warn";
+            label = "Partial";
+          } else if (status.startsWith("Overdue") || (daysOverdue !== undefined && daysOverdue > 0)) {
+            color = "bad";
+            const days = daysOverdue || 0;
+            label = `Overdue ${days}d`;
+          } else if (daysOverdue === 0) {
+            color = "warn";
+            label = "Due";
+          } else if (daysOverdue !== undefined && daysOverdue < 0) {
+            color = "neutral";
+            label = "Not due";
+          }
+          
+          return label !== "—" ? pill(label, color) : "—";
+        })()}${whatsappLink(t.phone)}${deleteBtn}</span>
         </div>
         <a href="/tenants/${t.id}" class="tcard-row2">
           <span>${escapeHtml(t.floor_name)} · ${escapeHtml(t.room_no)}-${t.bed_no}</span>
