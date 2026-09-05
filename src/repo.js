@@ -758,3 +758,63 @@ export async function deleteUser(id, currentUserId) {
   await query(`DELETE FROM sessions WHERE user_id = ${id}`);
   await query(`DELETE FROM users WHERE id = ${id}`);
 }
+
+export async function getPaymentStatusForTenant(tenantId, year, month) {
+  const charge = await one(`
+    SELECT rc.id, rc.expected_amount,
+      COALESCE((SELECT sum(p.amount) FROM payments p WHERE p.rent_charge_id = rc.id AND p.status = 'active'), 0) AS paid_amount
+    FROM rent_charges rc
+    WHERE rc.tenant_id = ${Number(tenantId)} 
+      AND rc.period_year = ${Number(year)} 
+      AND rc.period_month = ${Number(month)}
+      AND rc.status = 'active'
+  `);
+  
+  if (!charge) return "No due yet";
+  
+  const expected = Number(charge.expected_amount);
+  const paid = Number(charge.paid_amount);
+  
+  if (paid >= expected) return "Paid";
+  if (paid > 0) return "Partial";
+  return "Overdue";
+}
+
+export async function getDaysOverdue(chargeId) {
+  const charge = await one(`
+    SELECT rc.period_year, rc.period_month, rc.status,
+      COALESCE((SELECT sum(p.amount) FROM payments p WHERE p.rent_charge_id = rc.id AND p.status = 'active'), 0) AS paid_amount
+    FROM rent_charges rc
+    WHERE rc.id = ${Number(chargeId)}
+  `);
+  
+  if (!charge || charge.status !== 'active' || Number(charge.paid_amount) > 0) return 0;
+  
+  // Calculate days since the due date (end of the month)
+  const dueDate = new Date(Number(charge.period_year), Number(charge.period_month), 0);
+  const today = new Date();
+  const daysOverdue = Math.floor((today - dueDate) / (1000 * 60 * 60 * 24));
+  
+  return Math.max(0, daysOverdue);
+}
+
+export async function getAccountMonthlyStats(accountId) {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth() + 1;
+  
+  const result = await one(`
+    SELECT 
+      COALESCE(SUM(CASE WHEN type = 'credit' THEN amount ELSE 0 END), 0) AS income,
+      COALESCE(SUM(CASE WHEN type = 'debit' THEN amount ELSE 0 END), 0) AS expenses
+    FROM account_transactions
+    WHERE account_id = ${Number(accountId)}
+      AND EXTRACT(YEAR FROM txn_date) = ${year}
+      AND EXTRACT(MONTH FROM txn_date) = ${month}
+  `);
+  
+  return {
+    income: Number(result?.income || 0),
+    expenses: Number(result?.expenses || 0)
+  };
+}
