@@ -108,6 +108,28 @@ const server = http.createServer(async (req, res) => {
       await repo.createFloor({ name: form.name, sortOrder: 99 });
       return redirect(res, "/floors");
     }
+    const floorEditMatch = path.match(/^\/floors\/(\d+)\/edit$/);
+    if (floorEditMatch && req.method === "POST") {
+      const form = await parseForm(req);
+      try {
+        await repo.updateFloor(floorEditMatch[1], { name: form.name });
+        return redirect(res, "/floors");
+      } catch (e) {
+        const body = await floorsPage();
+        return sendHtml(res, 200, layout({ title: "Floors & Rooms", active: "/floors", user, body, flash: { kind: "bad", text: e.message } }));
+      }
+    }
+    const floorDeleteMatch = path.match(/^\/floors\/(\d+)\/delete$/);
+    if (floorDeleteMatch && req.method === "POST") {
+      try {
+        const result = await repo.deleteFloor(floorDeleteMatch[1]);
+        const body = await floorsPage();
+        return sendHtml(res, 200, layout({ title: "Floors & Rooms", active: "/floors", user, body, flash: { kind: "good", text: `${result.floor.name} deleted.` } }));
+      } catch (e) {
+        const body = await floorsPage();
+        return sendHtml(res, 200, layout({ title: "Floors & Rooms", active: "/floors", user, body, flash: { kind: "bad", text: e.message } }));
+      }
+    }
     if (path === "/floors/rooms" && req.method === "POST") {
       const form = await parseForm(req);
       await repo.createRoom({ floorId: form.floorId, roomNo: form.roomNo, sharingType: form.sharingType, defaultRent: form.defaultRent });

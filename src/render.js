@@ -450,6 +450,7 @@ export const BASE_CSS = `
     display:flex; flex-direction:column; gap:4px; font-size:12px; text-align:left; }
   .acct-breakdown .acct-row { display:flex; justify-content:space-between; gap:14px; }
 
+  .tenant-cards { display:none; }
   /* ---- Responsive tables: data-label + display:block turns rows into stacked
      cards on narrow screens, no JavaScript involved. ---- */
   @media (max-width: 700px) {
@@ -468,11 +469,45 @@ export const BASE_CSS = `
     table.responsive .card-id { display:block; font-size:15.5px; }
     table.responsive .card-id-sub { display:block; }
     table.responsive td .barbg { flex:1; min-width:90px; margin-left:14px; }
-    .ie-form.popover { width:200px; right:-8px; }
     /* Bigger tap targets once we're on a touch-sized viewport — 26px icon
        buttons are fine for a mouse pointer but tight for a fingertip. */
     .icon-btn { width:32px; height:32px; }
     .row-actions { gap:8px; }
+
+    /* ---- Edit/pay/waive/vacate popovers become a centered modal sheet on
+       phones instead of a small anchored popover. Anchored to the trigger's
+       position, the popover used to render off to the side of (or below) a
+       card — on a short viewport like a phone that regularly pushed its Save/
+       Cancel buttons past the bottom of the screen or under the fixed bottom
+       tab bar, making it look like editing silently did nothing. Centering it
+       as a fixed-position sheet, above the tab bar and side drawer (z-index),
+       with its own scroll for a tall form, keeps every field and both action
+       buttons reachable regardless of where on the page it was opened from. */
+    .ie-form.popover { position:fixed !important; top:50% !important; left:50% !important; right:auto !important;
+      transform:translate(-50%,-50%) !important; width:calc(100% - 40px) !important; max-width:340px !important;
+      max-height:80vh; overflow-y:auto; z-index:120; box-shadow:0 12px 40px rgba(0,0,0,.28); }
+    /* Dimmed backdrop behind the open sheet — CSS-only (:has, no JS): the
+       pseudo-element covers the viewport so the sheet reads as a modal, not
+       another in-page element. Browsers without :has() just skip the dimming;
+       the sheet itself still centers and scrolls correctly. */
+    .inline-edit:has(.ie-toggle:checked)::before { content:""; position:fixed; inset:0;
+      background:rgba(20,24,19,.45); z-index:119; }
+
+    /* ---- Compact tenant list for mobile: the regular responsive table
+       turns each tenant into a 6-line stacked card (name, room, phone, rent,
+       joined, status), so only one or two tenants fit on screen at once.
+       .tenant-cards replaces that with a dense two-line-per-tenant list —
+       name + status on one line, room/rent on the next — so a phone screen
+       shows many tenants at a glance, same as scanning a desktop table; a
+       tap still opens the full profile for anything not shown here. ---- */
+    .tenant-table-wrap { display:none; }
+    .tenant-cards { display:flex; flex-direction:column; }
+    .tcard { display:flex; flex-direction:column; gap:3px; padding:11px 2px; border-bottom:1px solid var(--surface-2); }
+    .tcard:last-child { border-bottom:none; }
+    .tcard-row1 { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .tcard-name { font-weight:700; font-size:14.5px; color:var(--ink); text-decoration:none; }
+    .tcard-row2 { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:12px;
+      color:var(--ink-soft); text-decoration:none; }
   }
 
   @media (max-width: 860px) {
@@ -484,6 +519,16 @@ export const BASE_CSS = `
     .grid2, .grid3, .grid4 { grid-template-columns: 1fr; }
     .stack-row { flex-direction:column; }
     .stack-row > * { width:100%; }
+
+    /* ---- Filter chip rows (status tabs, floor tabs): on desktop these wrap
+       to a second/third row when there are many floors, which is fine with
+       room to spare. On a phone that wrapping ate a huge chunk of the
+       screen before a single tenant was visible — scrolling the row
+       horizontally instead keeps every filter one tap away in a single
+       compact line. ---- */
+    .tabs { flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; margin-bottom:10px; padding-bottom:2px; }
+    .tabs::-webkit-scrollbar { display:none; }
+    .tabs a { flex-shrink:0; }
   }
   @media (min-width: 861px) and (max-width: 1080px) {
     .grid3, .grid4 { grid-template-columns: repeat(2, 1fr); }

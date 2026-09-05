@@ -48,10 +48,32 @@ export async function floorsPage() {
       </tr>`;
     }).join("");
 
+    const floorCb = `floor-edit-${f.id}`;
+    const floorHasRooms = frooms.length > 0;
+    const floorDeleteBtn = floorHasRooms
+      ? `<button type="button" class="icon-btn" title="Delete floor" disabled style="opacity:.4;cursor:not-allowed;" onclick="return false;">${icon(ICON.x, 13)}</button>`
+      : `<form method="post" action="/floors/${f.id}/delete" onsubmit="return confirm('Delete floor ${escapeHtml(f.name)}? This floor has no rooms, so it will be removed permanently.');" style="display:inline;">
+           <button type="submit" class="icon-btn bad" title="Delete floor">${icon(ICON.x, 13)}</button>
+         </form>`;
+
     return `
       <div class="card" style="padding:18px 20px;margin-bottom:16px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-          <h2 style="margin:0;">${escapeHtml(f.name)}</h2>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+          <div class="inline-edit" style="display:flex;align-items:center;gap:6px;">
+            <input type="checkbox" id="${floorCb}" class="ie-toggle">
+            <span class="ie-view" style="display:flex;align-items:center;gap:6px;">
+              <h2 style="margin:0;">${escapeHtml(f.name)}</h2>
+              <label for="${floorCb}" class="icon-btn ghost" title="Edit floor">${icon(ICON.pencil, 13)}</label>
+              ${floorDeleteBtn}
+            </span>
+            <form method="post" action="/floors/${f.id}/edit" class="ie-form popover">
+              <label class="field"><span>Floor name</span><input name="name" value="${escapeHtml(f.name)}" required></label>
+              <div class="popover-actions">
+                <button type="submit" class="icon-btn good" title="Save">${icon(ICON.check, 13)}</button>
+                <label for="${floorCb}" class="icon-btn bad" title="Cancel">${icon(ICON.x, 13)}</label>
+              </div>
+            </form>
+          </div>
           <details>
             <summary class="btn small" style="display:inline-flex;cursor:pointer;">+ Add room</summary>
             <form method="post" action="/floors/rooms" style="display:flex;gap:8px;align-items:flex-end;margin-top:10px;flex-wrap:wrap;">

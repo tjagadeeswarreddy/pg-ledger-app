@@ -11,6 +11,25 @@ export async function createFloor({ name, sortOrder }) {
   return one(`INSERT INTO floors(name, sort_order) VALUES (${lit(name)}, ${Number(sortOrder) || 0}) RETURNING *`);
 }
 
+export async function updateFloor(id, { name }) {
+  id = Number(id);
+  const floor = await one(`SELECT * FROM floors WHERE id = ${id}`);
+  if (!floor) throw new Error("Floor not found.");
+  return one(`UPDATE floors SET name = ${lit(name)} WHERE id = ${id} RETURNING *`);
+}
+
+export async function deleteFloor(id) {
+  id = Number(id);
+  const floor = await one(`SELECT * FROM floors WHERE id = ${id}`);
+  if (!floor) throw new Error("Floor not found.");
+  const counts = await one(`SELECT count(*) AS room_count FROM rooms WHERE floor_id = ${id}`);
+  if (Number(counts.room_count) > 0) {
+    throw new Error(`Can't delete ${floor.name} — it still has ${counts.room_count} room${Number(counts.room_count) === 1 ? "" : "s"}. Delete or move those rooms first.`);
+  }
+  await query(`DELETE FROM floors WHERE id = ${id}`);
+  return { floor };
+}
+
 // `activeOnly` is for room-picker dropdowns (Add/Edit tenant) — a deactivated
 // room shouldn't be offered for a new assignment. `includeRoomId` re-adds one
 // specific room even if it's inactive, so editing a tenant whose room was

@@ -39,6 +39,30 @@ export async function tenantsListPage({ status = "active", floorId, roomId, sear
         </form>` : ""}</td>
     </tr>`).join("");
 
+  // A dense, two-line-per-tenant list shown only on mobile in place of the
+  // table above (see .tenant-cards in BASE_CSS) — a phone screen fits many
+  // of these at once, where the full 6-field stacked card only fit one or
+  // two. Name + status up top, room/bed + rent underneath; both link to the
+  // full profile for anything not shown here (phone, joined date, etc).
+  const tenantCards = tenants.map((t) => {
+    const deleteBtn = t.status === "vacated" ? `
+      <form method="post" action="/tenants/${t.id}/delete" onsubmit="return confirm('Permanently delete ${escapeHtml(t.full_name)}? This removes their profile and full billing history — it cannot be undone.');" style="display:inline;">
+        <input type="hidden" name="redirectTo" value="/tenants?status=${status}${floorId ? `&floorId=${floorId}` : ""}${roomId ? `&roomId=${roomId}` : ""}${search ? `&q=${encodeURIComponent(search)}` : ""}">
+        <button type="submit" class="icon-btn bad" title="Delete tenant">${icon(ICON.x, 11)}</button>
+      </form>` : "";
+    return `
+      <div class="tcard">
+        <div class="tcard-row1">
+          <a href="/tenants/${t.id}" class="tcard-name">${escapeHtml(t.full_name)}</a>
+          <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;">${tenantStatusPill(t)}${deleteBtn}</span>
+        </div>
+        <a href="/tenants/${t.id}" class="tcard-row2">
+          <span>${escapeHtml(t.floor_name)} · ${escapeHtml(t.room_no)}-${t.bed_no}</span>
+          <span class="mono">${money(t.monthly_rent)}</span>
+        </a>
+      </div>`;
+  }).join("");
+
   // Each tab/filter set preserves the others — switching floor, status, or
   // room keeps whatever search text was typed too (same query-string-
   // composition pattern used throughout this page), so filtering doesn't
@@ -87,10 +111,15 @@ export async function tenantsListPage({ status = "active", floorId, roomId, sear
     ${roomBanner}
     ${searchBar}
     <div class="card" style="padding:6px 20px;">
-      <table class="responsive">
-        <thead><tr><th>Name</th><th>Room</th><th>Phone</th><th class="num">Rent</th><th>Joined</th><th>Status</th><th></th></tr></thead>
-        <tbody>${rows || `<tr><td colspan="7" style="color:var(--ink-faint);padding:14px 0;">${search ? `No tenants match “${escapeHtml(search)}” in this view.` : "No tenants in this view."}</td></tr>`}</tbody>
-      </table>
+      <div class="tenant-table-wrap">
+        <table class="responsive">
+          <thead><tr><th>Name</th><th>Room</th><th>Phone</th><th class="num">Rent</th><th>Joined</th><th>Status</th><th></th></tr></thead>
+          <tbody>${rows || `<tr><td colspan="7" style="color:var(--ink-faint);padding:14px 0;">${search ? `No tenants match “${escapeHtml(search)}” in this view.` : "No tenants in this view."}</td></tr>`}</tbody>
+        </table>
+      </div>
+      <div class="tenant-cards">
+        ${tenantCards || `<div style="color:var(--ink-faint);padding:14px 4px;">${search ? `No tenants match “${escapeHtml(search)}” in this view.` : "No tenants in this view."}</div>`}
+      </div>
     </div>
   `;
 }
