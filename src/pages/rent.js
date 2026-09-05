@@ -2,7 +2,7 @@ import { money, pill, escapeHtml, ordinal, icon, ICON, voidPaymentCell, editPaym
 import * as repo from "../repo.js";
 import { hasValue } from "../db.js";
 
-export async function rentPage({ year, month, floorId }) {
+export async function rentPage({ year, month, floorId, accountId }) {
   const now = new Date();
   year = Number(year) || now.getFullYear();
   month = Number(month) || now.getMonth() + 1;
@@ -17,7 +17,7 @@ export async function rentPage({ year, month, floorId }) {
   const accounts = await repo.listAccountsWithBalance();
   const charges = await repo.listChargesForMonth({ year, month, floorId });
   const notDueYet = await repo.listTenantsMissingCharge({ year, month, floorId });
-  const breakdownRows = await repo.paymentBreakdownForMonth({ year, month, floorId });
+  const breakdownRows = await repo.paymentBreakdownForMonth({ year, month, floorId, accountId });
 
   const breakdownByCharge = {};
   for (const b of breakdownRows) { (breakdownByCharge[b.rent_charge_id] ||= []).push(b); }
@@ -32,6 +32,8 @@ export async function rentPage({ year, month, floorId }) {
   const prev = month === 1 ? { y: year - 1, m: 12 } : { y: year, m: month - 1 };
   const next = month === 12 ? { y: year + 1, m: 1 } : { y: year, m: month + 1 };
   const floorQS = floorId ? `&floorId=${floorId}` : "";
+  const accountQS = accountId ? `&accountId=${accountId}` : "";
+  const allQS = floorQS + accountQS;
   const accountOptions = accounts.map((a) => `<option value="${a.id}">${escapeHtml(a.name)}</option>`).join("");
   const modeOptions = `<option value="upi">UPI</option><option value="cash">Cash</option><option value="bank_transfer">Bank transfer</option><option value="cheque">Cheque</option>`;
 
@@ -76,7 +78,7 @@ export async function rentPage({ year, month, floorId }) {
       : "";
 
     const historyLink = `<a class="icon-btn ghost" href="/rent/charge/${c.id}?year=${year}&month=${month}${floorQS}" title="View full payment history">${icon(ICON.history, 14)}</a>`;
-    const rowRedirect = `/rent?year=${year}&month=${month}${floorQS}`;
+    const rowRedirect = `/rent?year=${year}&month=${month}${allQS}`;
 
     // Expected cell: plain text for a waived charge (nothing to edit), otherwise
     // an inline pencil -> input -> checkmark/cancel edit-in-place.
@@ -90,7 +92,7 @@ export async function rentPage({ year, month, floorId }) {
           <input type="checkbox" id="${cb}" class="ie-toggle">
           <div class="ie-view">
             <span>${money(exp)}${adjustedNote}</span>
-            <label for="${cb}" class="icon-btn ghost" title="Edit amount">${icon(ICON.pencil, 13)}</label>
+            <label for="${cb}" class="icon-btn ghost" title="Edit amount" style="padding:6px;min-width:28px;min-height:28px;display:inline-flex;align-items:center;justify-content:center;">${icon(ICON.pencil, 16)}</label>
           </div>
           <form method="post" action="/rent/${c.id}/edit-amount" class="ie-form">
             <input type="hidden" name="year" value="${year}"><input type="hidden" name="month" value="${month}">
@@ -211,12 +213,12 @@ export async function rentPage({ year, month, floorId }) {
   return `
     <div class="toolbar">
       <div>
-        <h1>Rent Collection</h1>
+        <h1 class="hide-mobile">Rent Collection</h1><h1 style="display:none;font-size:18px;" class="show-mobile">Rent</h1>
         <div class="lbl" style="margin-top:3px;">${monthLabel}${createdCount ? ` · added ${createdCount} new due${createdCount === 1 ? "" : "s"} today` : ""}${notDueYet.length ? ` · ${notDueYet.length} tenant${notDueYet.length === 1 ? "" : "s"} not due yet` : ""}</div>
       </div>
       <div style="display:flex;gap:8px;">
-        <a class="btn" href="/rent?year=${prev.y}&month=${prev.m}${floorQS}">&larr; Prev</a>
-        <a class="btn" href="/rent?year=${next.y}&month=${next.m}${floorQS}">Next &rarr;</a>
+        <a class="btn" href="/rent?year=${prev.y}&month=${prev.m}${allQS}">&larr; Prev</a>
+        <a class="btn" href="/rent?year=${next.y}&month=${next.m}${allQS}">Next &rarr;</a>
       </div>
     </div>
     <div class="tabs">${floorTabs}</div>
@@ -262,6 +264,8 @@ export async function chargeDetailPage(id, { floorId } = {}) {
   else statusPill = pill("Overdue", "bad");
 
   const floorQS = floorId ? `&floorId=${floorId}` : "";
+  const accountQS = accountId ? `&accountId=${accountId}` : "";
+  const allQS = floorQS + accountQS;
   const backHref = `/rent?year=${c.period_year}&month=${c.period_month}${floorQS}`;
   const redirectTo = `/rent/charge/${c.id}${floorId ? `?floorId=${floorId}` : ""}`;
   const accountOptions = accounts.map((a) => `<option value="${a.id}">${escapeHtml(a.name)}</option>`).join("");
@@ -368,5 +372,16 @@ export async function chargeDetailPage(id, { floorId } = {}) {
         </table>
       </div>
     </div>
+  
+    <div style="position:fixed;bottom:20px;right:20px;z-index:100;" class="show-mobile">
+      <label class="field" style="display:flex;flex-direction:column;gap:6px;background:var(--surface);padding:12px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+        <span style="font-size:12px;font-weight:500;">View by Account</span>
+        <select style="padding:6px;border:1px solid var(--border);border-radius:4px;font-size:14px;" onchange="const id = this.value; window.location.href='/rent?year=${year}&month=${month}${floorQS}' + (id ? '&accountId='+id : ''); this.value='';" data-default="${accountId || ""}">
+          <option value="">All accounts</option>
+          ${accounts.map((a) => `<option value="${a.id}">${escapeHtml(a.name.length > 15 ? a.name.substring(0, 12) + '...' : a.name)}</option>`).join("")}
+        </select>
+      </label>
+    </div>
+    
   `;
 }
