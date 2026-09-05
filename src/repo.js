@@ -282,8 +282,10 @@ export async function ensureChargesForMonth(year, month) {
   const todayY = today.getFullYear(), todayM = today.getMonth() + 1, todayD = today.getDate();
   const isCurrentMonth = Number(year) === todayY && Number(month) === todayM;
   const isFutureMonth = Number(year) > todayY || (Number(year) === todayY && Number(month) > todayM);
+  const isPastMonth = Number(year) < todayY || (Number(year) === todayY && Number(month) < todayM);
 
-  if (isFutureMonth) return 0;
+  // Only create charges for current month onwards, never for past months
+  if (isFutureMonth || isPastMonth) return 0;
 
   const tenants = await query(`SELECT id, monthly_rent, rent_due_day FROM tenants WHERE status = 'active'`);
   let created = 0;
