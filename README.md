@@ -82,6 +82,62 @@ e2e/test.mjs                   Playwright end-to-end test (154 checks, desktop
                                 still-waived regression test
 ```
 
+## Screenshots
+
+### Dashboard
+The main dashboard provides a comprehensive overview of the PG property operations at a glance, displaying key metrics like collection status, occupancy rates, outstanding receivables, and a quick-view of vacant beds.
+
+**Dashboard Overview**
+![Dashboard](docs/screenshots/01-dashboard.png)
+
+### Floors & Rooms Management
+Manage individual floors and rooms, including room numbers, sharing configuration (single/double/triple occupancy), and default rent amounts.
+
+**Floors Page**
+![Floors and Rooms](docs/screenshots/02-floors.png)
+
+### Tenants Directory
+Complete tenant list with real-time payment status (Paid, Overpaid, Partial, Overdue, Notice). Filter by status, search by name/email, and quick access to individual tenant profiles.
+
+**Tenants List**
+![Tenants List](docs/screenshots/03-tenants.png)
+
+### Tenant Profile
+Detailed view of individual tenant information including rent history, payment status, notice period (if applicable), contact details, and quick actions.
+
+**Tenant Profile**
+![Tenant Profile](docs/screenshots/04-tenant-profile.png)
+
+### Rent Collection
+Month-to-month rent collection tracker with daily updates, showing expected vs. actual collections, overpayment tracking, and ability to record/manage individual payments.
+
+**Rent Collection Page**
+![Rent Collection](docs/screenshots/05-rent-collection.png)
+
+### Accounts & Transactions
+Track income from rent and other sources, manage expenses, and view detailed account balances and transaction history.
+
+**Accounts Page**
+![Accounts](docs/screenshots/06-accounts.png)
+
+### Expenses Tracking
+Record and categorize property expenses (maintenance, utilities, repairs, etc.) with detailed transaction logs.
+
+**Expenses Page**
+![Expenses](docs/screenshots/07-expenses.png)
+
+### Mobile Views
+Fully responsive design optimized for mobile devices with touch-friendly interfaces and reorganized layouts for smaller screens.
+
+**Mobile Dashboard**
+![Mobile Dashboard](docs/screenshots/08-mobile-dashboard.png)
+
+**Mobile Tenants List**
+![Mobile Tenants](docs/screenshots/09-mobile-tenants.png)
+
+**Mobile Rent Collection**
+![Mobile Rent Collection](docs/screenshots/10-mobile-rent.png)
+
 ## Running it locally
 
 Prerequisites: Node.js 18+, PostgreSQL running locally.
