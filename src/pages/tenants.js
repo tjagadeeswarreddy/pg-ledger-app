@@ -15,6 +15,7 @@ export async function tenantsListPage({ status = "active", floorId, roomId, sear
   const floors = await repo.listFloors();
   let tenants = await repo.listTenants({ status, floorId, roomId, search });
   const room = roomId ? await repo.getRoom(roomId) : null;
+  const emptyRooms = await repo.getEmptyRooms();
 
   // Fetch payment status for active tenants (for current month)
   const today = new Date();
@@ -93,7 +94,7 @@ export async function tenantsListPage({ status = "active", floorId, roomId, sear
       <div class="tcard">
         <div class="tcard-row1">
           <a href="/tenants/${t.id}" class="tcard-name">${escapeHtml(t.full_name)}</a>
-          <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;">${tenantStatusPill(t)}${whatsappLink(t.phone)}${deleteBtn}</span>
+          <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;">${paymentStatus[t.id] ? pill(paymentStatus[t.id], paymentStatus[t.id] === "Paid" ? "good" : paymentStatus[t.id] === "Partial" ? "warn" : "bad") : "—"}${whatsappLink(t.phone)}${deleteBtn}</span>
         </div>
         <a href="/tenants/${t.id}" class="tcard-row2">
           <span>${escapeHtml(t.floor_name)} · ${escapeHtml(t.room_no)}-${t.bed_no}</span>
@@ -152,6 +153,7 @@ export async function tenantsListPage({ status = "active", floorId, roomId, sear
     </div>
     <div class="tabs">
       <a href="/tenants?status=active${floorQS}" class="${status === "active" ? "active" : ""}">Active</a>
+      <a href="/tenants?status=notice${floorQS}" class="${status === "notice" ? "active" : ""}">Notice</a>
       <a href="/tenants?status=vacated${floorQS}" class="${status === "vacated" ? "active" : ""}">Vacated</a>
       <a href="/tenants?status=all${floorQS}" class="${status === "all" ? "active" : ""}">All</a>
     </div>

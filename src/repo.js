@@ -125,7 +125,11 @@ export async function reactivateRoom(id) {
 
 export async function listTenants({ status = "active", floorId, roomId, search } = {}) {
   const clauses = [];
-  if (status !== "all") clauses.push(`t.status = ${lit(status)}`);
+  if (status === "notice") {
+    clauses.push(`t.notice_date IS NOT NULL`);
+  } else if (status !== "all") {
+    clauses.push(`t.status = ${lit(status)}`);
+  }
   if (floorId) clauses.push(`f.id = ${Number(floorId)}`);
   if (roomId) clauses.push(`r.id = ${Number(roomId)}`);
   // Free-text search box on the Tenants page — matches name or phone
@@ -822,4 +826,18 @@ export async function getAccountMonthlyStats(accountId) {
     income: Number(result?.income || 0),
     expenses: Number(result?.expenses || 0)
   };
+}
+
+export async function getEmptyRooms() {
+  return query(`
+    SELECT r.id, r.room_no, r.sharing_type, r.default_rent, f.name AS floor_name, f.id AS floor_id,
+      (r.sharing_type - COUNT(t.id)) AS empty_beds
+    FROM rooms r
+    JOIN floors f ON f.id = r.floor_id
+    LEFT JOIN tenants t ON t.room_id = r.id AND t.status = 'active'
+    WHERE r.status = 'active'
+    GROUP BY r.id, r.room_no, r.sharing_type, r.default_rent, f.name, f.id
+    HAVING (r.sharing_type - COUNT(t.id)) > 0
+    ORDER BY f.sort_order, r.room_no
+  `);
 }
