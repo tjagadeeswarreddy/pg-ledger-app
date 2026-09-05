@@ -784,16 +784,18 @@ export async function getPaymentStatusForTenant(tenantId, year, month) {
 
 export async function getDaysOverdue(chargeId) {
   const charge = await one(`
-    SELECT rc.period_year, rc.period_month, rc.status,
+    SELECT rc.period_year, rc.period_month, rc.status, t.rent_due_day,
       COALESCE((SELECT sum(p.amount) FROM payments p WHERE p.rent_charge_id = rc.id AND p.status = 'active'), 0) AS paid_amount
     FROM rent_charges rc
+    JOIN tenants t ON t.id = rc.tenant_id
     WHERE rc.id = ${Number(chargeId)}
   `);
   
   if (!charge || charge.status !== 'active' || Number(charge.paid_amount) > 0) return 0;
   
-  // Calculate days since the due date (end of the month)
-  const dueDate = new Date(Number(charge.period_year), Number(charge.period_month), 0);
+  // Calculate days since the actual due day of the month
+  const dueDay = Number(charge.rent_due_day) || 1;
+  const dueDate = new Date(Number(charge.period_year), Number(charge.period_month) - 1, dueDay);
   const today = new Date();
   const daysOverdue = Math.floor((today - dueDate) / (1000 * 60 * 60 * 24));
   
