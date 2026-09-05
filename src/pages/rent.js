@@ -201,7 +201,32 @@ export async function rentPage({ year, month, floorId, accountId }) {
       </td>
       <td class="mono hide-mobile" data-label="Room">${escapeHtml(t.room_no)}</td>
       <td class="num" data-label="Monthly rent">${money(t.monthly_rent)}</td>
-      <td data-label="Due date">Due on the ${ordinal(t.rent_due_day || 5)}</td>
+      <td data-label="Due date">
+        ${(() => {
+          const dueDay = t.rent_due_day || 5;
+          const today = new Date().getDate();
+          const currentMonth = new Date().getMonth();
+          const currentYear = new Date().getFullYear();
+          let dueDate = new Date(currentYear, currentMonth, dueDay);
+          
+          // If due date is in the past (this month), it's for next month
+          if (dueDay < today) {
+            dueDate = new Date(currentYear, currentMonth + 1, dueDay);
+          }
+          
+          const daysUntilDue = Math.floor((dueDate - new Date(currentYear, currentMonth, today)) / (1000 * 60 * 60 * 24));
+          
+          if (daysUntilDue === 0) {
+            return `Due today`;
+          } else if (daysUntilDue === 1) {
+            return `Due tomorrow`;
+          } else if (daysUntilDue > 0) {
+            return `Due in ${daysUntilDue} day${daysUntilDue === 1 ? "" : "s"}`;
+          } else {
+            return `Due on the ${ordinal(dueDay)}`;
+          }
+        })()}
+      </td>
       <td data-label="">
         <form method="post" action="/rent/tenant/${t.tenant_id}/add-due" style="display:inline;">
           <input type="hidden" name="year" value="${year}"><input type="hidden" name="month" value="${month}">
