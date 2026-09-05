@@ -22,6 +22,12 @@ export async function rentPage({ year, month, floorId }) {
   const breakdownByCharge = {};
   for (const b of breakdownRows) { (breakdownByCharge[b.rent_charge_id] ||= []).push(b); }
 
+  // Fetch days overdue for each charge to display in the status indicator
+  const daysOverdueMap = {};
+  for (const c of charges) {
+    daysOverdueMap[c.id] = await repo.getDaysOverdue(c.id);
+  }
+
   const monthLabel = new Date(year, month - 1, 1).toLocaleDateString("en-IN", { month: "long", year: "numeric" });
   const prev = month === 1 ? { y: year - 1, m: 12 } : { y: year, m: month - 1 };
   const next = month === 12 ? { y: year + 1, m: 1 } : { y: year, m: month + 1 };
@@ -49,7 +55,12 @@ export async function rentPage({ year, month, floorId }) {
     if (c.status === "waived") statusPill = pill("Waived", "neutral");
     else if (outstanding === 0) statusPill = pill("Paid", "good");
     else if (paid > 0) statusPill = pill("Partial", "warn");
-    else statusPill = pill("Overdue", "bad");
+    else {
+      // outstanding > 0 and paid === 0 - show overdue with days indicator
+      const daysOverdue = daysOverdueMap[c.id] || 0;
+      const label = daysOverdue > 0 ? `Overdue ${daysOverdue}d` : "Overdue";
+      statusPill = pill(label, "bad");
+    }
 
     const adjustedNote = hasValue(c.original_amount) && Number(c.original_amount) !== exp
       ? `<div style="font-size:11px;color:var(--ink-faint);margin-top:2px;" title="${escapeHtml(c.adjusted_reason || "")}">was ${money(c.original_amount)}</div>`

@@ -11,33 +11,72 @@ function tenantStatusPill(t) {
   return pill("Active", "good");
 }
 
-export async function tenantsListPage({ status = "active", floorId, roomId, search = "" } = {}) {
+export async function tenantsListPage({ status = "active", floorId, roomId, search = "", sort = "name", dir = "asc" } = {}) {
   const floors = await repo.listFloors();
-  const tenants = await repo.listTenants({ status, floorId, roomId, search });
+  let tenants = await repo.listTenants({ status, floorId, roomId, search });
   const room = roomId ? await repo.getRoom(roomId) : null;
+
+  // Fetch payment status for active tenants (for current month)
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth() + 1;
+  const paymentStatus = {};
+  for (const t of tenants) {
+    if (t.status === "active" || t.status === "vacated") {
+      paymentStatus[t.id] = await repo.getPaymentStatusForTenant(t.id, year, month);
+    }
+  }
+
+  // Sort tenants based on the sort column and direction
+  const sortComparators = {
+    name: (a, b) => a.full_name.localeCompare(b.full_name),
+    room: (a, b) => {
+      const aRoom = `${a.floor_name}${a.room_no}`;
+      const bRoom = `${b.floor_name}${b.room_no}`;
+      return aRoom.localeCompare(bRoom);
+    },
+    rent: (a, b) => Number(a.monthly_rent) - Number(b.monthly_rent),
+    payment: (a, b) => {
+      const statusOrder = { "Paid": 0, "No due yet": 1, "Overdue": 2, "—": 3 };
+      const aStatus = paymentStatus[a.id] || "—";
+      const bStatus = paymentStatus[b.id] || "—";
+      return (statusOrder[aStatus] || 3) - (statusOrder[bStatus] || 3);
+    }
+  };
+
+  if (sortComparators[sort]) {
+    tenants.sort(sortComparators[sort]);
+    if (dir === "desc") tenants.reverse();
+  }
 
   // The Name cell doubles as the mobile card's identity header: the tenant's
   // name in bold with the room folded in underneath as a subtitle, so a
   // glance at a stacked mobile card says whose card it is. The separate Room
   // column is then hidden on mobile only (card-id-cell/card-id-sub, hide-mobile
   // — see BASE_CSS) to avoid showing the room twice; desktop is unaffected.
-  const rows = tenants.map((t) => `
+  const rows = tenants.map((t) => {
+    const payStatus = paymentStatus[t.id] || "—";
+    let payStatusClass = "";
+    if (payStatus === "Paid") payStatusClass = "good";
+    if (payStatus === "Overdue") payStatusClass = "bad";
+    return `
     <tr>
       <td data-label="Name" class="card-id-cell">
         <a href="/tenants/${t.id}" class="card-id" style="text-decoration:none;color:inherit;">${escapeHtml(t.full_name)}</a>
         <div class="card-id-sub">${escapeHtml(t.floor_name)} · ${escapeHtml(t.room_no)}-${t.bed_no}</div>
       </td>
       <td data-label="Room" class="hide-mobile">${escapeHtml(t.floor_name)} · ${escapeHtml(t.room_no)}-${t.bed_no}</td>
-      <td data-label="Phone">${escapeHtml(t.phone || "")}${whatsappLink(t.phone)}</td>
+      <td data-label="Phone" class="hide-mobile">${escapeHtml(t.phone || "")}${whatsappLink(t.phone)}</td>
       <td class="num" data-label="Rent">${money(t.monthly_rent)}</td>
-      <td data-label="Joined">${t.joining_date}</td>
+      <td data-label="Payment" class="hide-mobile" ${payStatusClass ? `style="color:var(--${payStatusClass})"` : ""}>${payStatus}</td>
       <td data-label="Status">${tenantStatusPill(t)}</td>
       <td data-label="">${t.status === "vacated" ? `
         <form method="post" action="/tenants/${t.id}/delete" onsubmit="return confirm('Permanently delete ${escapeHtml(t.full_name)}? This removes their profile and full billing history — it cannot be undone.');" style="display:inline;">
           <input type="hidden" name="redirectTo" value="/tenants?status=${status}${floorId ? `&floorId=${floorId}` : ""}${roomId ? `&roomId=${roomId}` : ""}${search ? `&q=${encodeURIComponent(search)}` : ""}">
           <button type="submit" class="icon-btn bad" title="Delete tenant">${icon(ICON.x, 13)}</button>
         </form>` : ""}</td>
-    </tr>`).join("");
+    </tr>`;
+  }).join("");
 
   // A dense, two-line-per-tenant list shown only on mobile in place of the
   // table above (see .tenant-cards in BASE_CSS) — a phone screen fits many
@@ -54,7 +93,7 @@ export async function tenantsListPage({ status = "active", floorId, roomId, sear
       <div class="tcard">
         <div class="tcard-row1">
           <a href="/tenants/${t.id}" class="tcard-name">${escapeHtml(t.full_name)}</a>
-          <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;">${tenantStatusPill(t)}${deleteBtn}</span>
+          <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;">${tenantStatusPill(t)}${whatsappLink(t.phone)}${deleteBtn}</span>
         </div>
         <a href="/tenants/${t.id}" class="tcard-row2">
           <span>${escapeHtml(t.floor_name)} · ${escapeHtml(t.room_no)}-${t.bed_no}</span>
@@ -62,6 +101,15 @@ export async function tenantsListPage({ status = "active", floorId, roomId, sear
         </a>
       </div>`;
   }).join("");
+
+  // Helper to create sortable header links
+  function sortHeader(label, sortKey) {
+    const isCurrent = sort === sortKey;
+    const newDir = isCurrent && dir === "asc" ? "desc" : "asc";
+    const arrow = isCurrent ? (dir === "asc" ? " ↑" : " ↓") : "";
+    const qs = `?status=${status}${floorId ? `&floorId=${floorId}` : ""}${roomId ? `&roomId=${roomId}` : ""}${search ? `&q=${encodeURIComponent(search)}` : ""}&sort=${sortKey}&dir=${newDir}`;
+    return `<a href="/tenants${qs}" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:4px;cursor:pointer;">${label}${arrow}</a>`;
+  }
 
   // Each tab/filter set preserves the others — switching floor, status, or
   // room keeps whatever search text was typed too (same query-string-
@@ -113,7 +161,7 @@ export async function tenantsListPage({ status = "active", floorId, roomId, sear
     <div class="card" style="padding:6px 20px;">
       <div class="tenant-table-wrap">
         <table class="responsive">
-          <thead><tr><th>Name</th><th>Room</th><th>Phone</th><th class="num">Rent</th><th>Joined</th><th>Status</th><th></th></tr></thead>
+          <thead><tr><th>${sortHeader("Name", "name")}</th><th>${sortHeader("Room", "room")}</th><th>Phone</th><th class="num">${sortHeader("Rent", "rent")}</th><th>${sortHeader("Payment", "payment")}</th><th>Status</th><th></th></tr></thead>
           <tbody>${rows || `<tr><td colspan="7" style="color:var(--ink-faint);padding:14px 0;">${search ? `No tenants match “${escapeHtml(search)}” in this view.` : "No tenants in this view."}</td></tr>`}</tbody>
         </table>
       </div>
@@ -189,7 +237,7 @@ export async function tenantNewPage() {
         const sel = roomSel.selectedOptions[0];
         if (sel) {
           rentInput.value = sel.dataset.rent;
-          depositInput.value = Number(sel.dataset.rent) * 2;
+          depositInput.value = 2000;
         }
       });
     </script>

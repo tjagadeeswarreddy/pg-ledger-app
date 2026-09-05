@@ -5,6 +5,12 @@ export async function accountsPage() {
   const accounts = await repo.listAllAccounts();
   const { rows: incomeRows, total: incomeTotal } = await repo.accountsIncomeSummary();
 
+  // Fetch monthly stats for each account to display income/expenses this month
+  const monthlyStatsMap = {};
+  for (const a of accounts) {
+    monthlyStatsMap[a.id] = await repo.getAccountMonthlyStats(a.id);
+  }
+
   const incomeTableRows = incomeRows.map((r) => {
     const active = r.is_active === "t" || r.is_active === true;
     return `<tr>
@@ -28,6 +34,7 @@ export async function accountsPage() {
       : `<form method="post" action="/accounts/${a.id}/reactivate" style="display:inline;">
            <button type="submit" class="icon-btn" title="Reactivate account">${icon(ICON.undo, 13)}</button>
          </form>`;
+    const monthlyStats = monthlyStatsMap[a.id] || { income: 0, expenses: 0 };
     return `
     <div class="card" style="padding:16px 18px;${active ? "" : "opacity:.6;"}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;">
@@ -35,7 +42,16 @@ export async function accountsPage() {
         ${active ? "" : pill("Inactive", "neutral")}
       </div>
       <div class="acct-name" style="font-size:14.5px;font-weight:600;margin-top:6px;">${escapeHtml(a.name)}</div>
-      <div class="mono" style="font-size:20px;font-weight:600;margin-top:8px;">${money(a.balance)}</div>
+      <div style="display:flex;gap:20px;margin-top:12px;font-size:13px;flex-direction:column;">
+        <div>
+          <div class="lbl" style="margin-bottom:4px;">Income this month</div>
+          <div class="mono" style="font-size:16px;font-weight:600;">${money(monthlyStats.income)}</div>
+        </div>
+        <div>
+          <div class="lbl" style="margin-bottom:4px;">Expenses this month</div>
+          <div class="mono" style="font-size:16px;font-weight:600;">${money(monthlyStats.expenses)}</div>
+        </div>
+      </div>
       <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;">
         <a href="/accounts/${a.id}" style="font-size:12.5px;">view transactions →</a>
         <div class="inline-edit">
