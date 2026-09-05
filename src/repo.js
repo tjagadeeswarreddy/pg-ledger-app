@@ -4,7 +4,21 @@ import { query, one, lit, hasValue, tx } from "./db.js";
 // ---------- Floors & Rooms ----------
 
 export async function listFloors() {
-  return query(`SELECT * FROM floors ORDER BY sort_order, id`);
+  return query(`
+    SELECT * FROM floors
+    ORDER BY
+      CASE
+        WHEN name = 'Ground Floor' THEN 0
+        WHEN name LIKE '1st Floor' THEN 1
+        WHEN name LIKE '2nd Floor' THEN 2
+        WHEN name LIKE '3rd Floor' THEN 3
+        WHEN name LIKE '4th Floor' THEN 4
+        WHEN name LIKE '5th Floor' THEN 5
+        ELSE 999
+      END,
+      sort_order,
+      id
+  `);
 }
 
 export async function createFloor({ name, sortOrder }) {
