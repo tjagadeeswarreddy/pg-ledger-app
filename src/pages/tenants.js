@@ -89,9 +89,9 @@ export async function tenantsListPage({ status = "active", floorId, roomId, sear
     <tr>
       <td data-label="Name" class="card-id-cell">
         <a href="/tenants/${t.id}" class="card-id" style="text-decoration:none;color:inherit;">${escapeHtml(t.full_name)}</a>
-        <div class="card-id-sub">${escapeHtml(t.floor_name)} · ${escapeHtml(t.room_no)}-${t.bed_no}</div>
+        <div class="card-id-sub">${escapeHtml(t.room_no)}-${t.bed_no}</div>
       </td>
-      <td data-label="Room" class="hide-mobile">${escapeHtml(t.floor_name)} · ${escapeHtml(t.room_no)}-${t.bed_no}</td>
+      <td data-label="Room" class="hide-mobile">${escapeHtml(t.room_no)}-${t.bed_no}</td>
       <td data-label="Phone" class="hide-mobile">${escapeHtml(t.phone || "")}${whatsappLink(t.phone)}</td>
       <td class="num" data-label="Rent">${money(t.monthly_rent)}</td>
       <td data-label="Payment" class="hide-mobile" ${payStatusClass ? `style="color:var(--${payStatusClass})"` : ""}>${payStatus}</td>
@@ -147,7 +147,7 @@ export async function tenantsListPage({ status = "active", floorId, roomId, sear
         })()}${whatsappLink(t.phone)}${deleteBtn}</span>
         </div>
         <a href="/tenants/${t.id}" class="tcard-row2">
-          <span>${escapeHtml(t.floor_name)} · ${escapeHtml(t.room_no)}-${t.bed_no}</span>
+          <span>${escapeHtml(t.room_no)}-${t.bed_no}</span>
           <span class="mono">${money(t.monthly_rent)}</span>
         </a>
       </div>`;
