@@ -410,6 +410,16 @@ export async function listChargesForTenant(tenantId, limit = 12) {
     LIMIT ${Number(limit)}`);
 }
 
+export async function getChargeForTenant(tenantId, year, month) {
+  return one(`
+    SELECT id, tenant_id, period_year, period_month, expected_amount, paid_amount, status
+    FROM rent_charges
+    WHERE tenant_id = ${Number(tenantId)} AND period_year = ${Number(year)} AND period_month = ${Number(month)}
+    LIMIT 1`);
+}
+
+
+
 export async function waiveCharge(id, reason) {
   return one(`UPDATE rent_charges SET status = 'waived', waived_reason = ${lit(reason)}, waived_at = now()
     WHERE id = ${Number(id)} RETURNING *`);
