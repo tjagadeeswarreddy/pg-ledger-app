@@ -412,9 +412,10 @@ export async function listChargesForTenant(tenantId, limit = 12) {
 
 export async function getChargeForTenant(tenantId, year, month) {
   return one(`
-    SELECT id, tenant_id, period_year, period_month, expected_amount, paid_amount, status
-    FROM rent_charges
-    WHERE tenant_id = ${Number(tenantId)} AND period_year = ${Number(year)} AND period_month = ${Number(month)}
+    SELECT rc.id, rc.tenant_id, rc.period_year, rc.period_month, rc.expected_amount, rc.status,
+      COALESCE((SELECT sum(p.amount) FROM payments p WHERE p.rent_charge_id = rc.id AND p.status = 'active'), 0) AS paid_amount
+    FROM rent_charges rc
+    WHERE rc.tenant_id = ${Number(tenantId)} AND rc.period_year = ${Number(year)} AND rc.period_month = ${Number(month)}
     LIMIT 1`);
 }
 
