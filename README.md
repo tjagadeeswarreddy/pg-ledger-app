@@ -58,6 +58,32 @@ Desktop on the left, mobile on the right, for the screens that have both.
   <img src="docs/screenshots/mobileview_sidedrawer.png" height="300">
 </p>
 
+## Site map
+
+```mermaid
+graph TD
+    Login[Login] --> Dashboard
+
+    Dashboard --> Floors[Floors and Rooms]
+    Dashboard --> Tenants
+    Dashboard --> Rent[Rent Collection]
+    Dashboard --> Accounts
+    Dashboard --> Expenses
+    Dashboard --> Users
+
+    Floors -- click a room --> Tenants
+
+    Tenants --> TenantNew[Add Tenant]
+    Tenants --> TenantProfile[Tenant Profile]
+    TenantProfile --> TenantEdit[Edit Tenant]
+
+    Rent --> ChargeDetail[Charge Detail]
+
+    Accounts --> AccountLedger[Account Ledger]
+```
+
+Everything sits behind login — there's no public sign-up page, a login can only be created by someone who's already signed in, from the Users page.
+
 ## What it does
 
 Add tenants to rooms across floors, and each month the app works out who owes what based on their own rent due date. Rent Collection shows who's paid, who's partial, and who's overdue at a glance. Accounts tracks money in and out — cash, UPI, bank transfers — with balances that are always calculated from the transaction history rather than a number that can quietly drift out of sync. Expenses, tenant notices, deposit refunds, and a couple of logins for a manager or family member to help run things are all in there too. It's fully responsive, so day-to-day rent collection works fine from a phone.
@@ -95,6 +121,33 @@ This was originally planned as Next.js + Prisma + Tailwind. Partway through buil
 - **PostgreSQL**, via the `pg` driver (a pooled connection in `src/db.js`).
 - **No frontend framework.** Pages are server-rendered HTML strings, styled with plain CSS. Things like the popovers and the mobile nav drawer use a pure-CSS checkbox trick instead of JavaScript.
 - **Playwright** for the end-to-end test suite (`e2e/test.mjs`).
+
+## Site map
+
+How the pages connect. Dashboard, Floors & Rooms, Tenants, Rent Collection, Accounts, Expenses, and Users are all one click away from each other via the sidebar (bottom nav on mobile) — the arrows below are the extra, page-specific links between them.
+
+```mermaid
+flowchart TD
+    Login([Login]) --> Dashboard
+
+    Dashboard --> Floors[Floors and Rooms]
+    Dashboard --> TenantsList[Tenants List]
+    Dashboard --> Rent[Rent Collection]
+    Dashboard --> Accounts[Accounts]
+    Dashboard --> Expenses[Expenses]
+    Dashboard --> Users[Users]
+
+    Floors -- click a room --> TenantsList
+    TenantsList --> AddTenant[Add Tenant]
+    TenantsList --> TenantProfile[Tenant Profile]
+    TenantProfile --> EditTenant[Edit Tenant]
+    TenantProfile -. manage dues .-> ChargeDetail
+
+    Rent --> ChargeDetail[Charge Detail]
+    ChargeDetail -. view tenant .-> TenantProfile
+
+    Accounts --> AccountLedger[Account Ledger]
+```
 
 ## Testing
 
