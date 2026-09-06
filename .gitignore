@@ -1,3 +1,4 @@
 server.log
 e2e/shots/
 .DS_Store
+node_modules/
