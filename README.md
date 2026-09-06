@@ -47,7 +47,7 @@ A small web app for running a paying-guest (PG) property — tenants, rooms, ren
 </tr>
 <tr>
 <td align="center"><strong>Accounts</strong></td>
-<td align="center">—</td>
+<td align="center"><img src="docs/screenshots/accounts.png" height="320"></td>
 <td align="center"><img src="docs/screenshots/mobileview_accounts.png" height="320"></td>
 </tr>
 <tr>
