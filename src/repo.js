@@ -675,9 +675,14 @@ export async function dashboardKpis(year, month) {
 }
 
 export async function floorPerformance(year, month) {
+  // Same fix as dashboardKpis: "expected" is every currently-active tenant's
+  // monthly_rent for this floor, not just tenants already billed this month
+  // (rent_charges rows are created lazily once rent_due_day arrives). Vacated
+  // tenants with an existing charge row for this period still count, so a
+  // departed tenant's already-billed dues aren't dropped from history.
   return query(`
     SELECT f.id, f.name,
-      COALESCE(sum(rc.expected_amount), 0) AS expected,
+      COALESCE(sum(t.monthly_rent) FILTER (WHERE t.status = 'active' OR rc.id IS NOT NULL), 0) AS expected,
       COALESCE(sum(paid.amt), 0) AS actual
     FROM floors f
     LEFT JOIN rooms r ON r.floor_id = f.id
