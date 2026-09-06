@@ -632,11 +632,19 @@ export async function deleteExpense(id, reason) {
 // ---------- Dashboard ----------
 
 export async function dashboardKpis(year, month) {
+  // "Expected" counts every currently-active tenant's rent for this month, even
+  // before their rent_due_day has arrived and a rent_charges row exists yet —
+  // otherwise mid-month totals silently excluded anyone not yet billed. Vacated
+  // tenants who already have a charge row for this period still count (keeps
+  // history accurate). Always uses the tenant's current monthly_rent rather than
+  // the (possibly adjusted/prorated) due amount stored on the rent_charges row.
   const collected = await one(`
-    SELECT COALESCE(sum(rc.expected_amount), 0) AS expected,
+    SELECT COALESCE(sum(t.monthly_rent), 0) AS expected,
       COALESCE((SELECT sum(p.amount) FROM payments p JOIN rent_charges rc2 ON rc2.id = p.rent_charge_id
         WHERE rc2.period_year = ${Number(year)} AND rc2.period_month = ${Number(month)} AND p.status = 'active'), 0) AS collected
-    FROM rent_charges rc WHERE rc.period_year = ${Number(year)} AND rc.period_month = ${Number(month)} AND rc.status = 'active'`);
+    FROM tenants t
+    LEFT JOIN rent_charges rc ON rc.tenant_id = t.id AND rc.period_year = ${Number(year)} AND rc.period_month = ${Number(month)} AND rc.status = 'active'
+    WHERE t.status = 'active' OR rc.id IS NOT NULL`);
 
   const outstandingRow = await one(`
     SELECT COALESCE(sum(GREATEST(rc.expected_amount - COALESCE(paid.amt, 0), 0)), 0) AS outstanding,
