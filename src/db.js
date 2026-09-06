@@ -1,17 +1,34 @@
-// Zero-dependency PostgreSQL access: shells out to the psql CLI (execFile, so no
-// shell interpolation risk) and parses --csv output. SQL literals are escaped by
-// `lit()` below rather than passed through a shell string, so this is safe against
-// injection from the values this app itself constructs.
-import { execFile } from "node:child_process";
-import { parseCsv } from "./csv.js";
+// PostgreSQL access via a pooled `pg` client instead of shelling out to psql
+// per query. Every column comes back as the raw text the server sends — same
+// as psql's default output — never pg's auto-parsed JS types (numbers as JS
+// numbers, dates as Date objects, etc). That keeps this drop-in for every
+// existing call site: callers already do `Number(row.foo)` and rely on
+// hasValue()'s '' / NULL blur, exactly as psql --csv produced.
+import pg from "pg";
+
+const { Pool } = pg;
 
 const PG = {
   host: process.env.PGHOST || "localhost",
-  port: process.env.PGPORT || "5432",
+  port: Number(process.env.PGPORT) || 5432,
   user: process.env.PGUSER || "pgledger",
   database: process.env.PGDATABASE || "pgledger",
   password: process.env.PGPASSWORD || "pgledger_dev_pw",
 };
+
+// Disable pg's type parsing entirely — every column value comes back as the
+// raw wire-protocol text (identical to what psql's text/--csv output shows,
+// since both come from the server's own text output functions).
+const rawTextTypes = { getTypeParser: () => (value) => value };
+
+const pool = new Pool({ ...PG, types: rawTextTypes, max: 10, idleTimeoutMillis: 30000 });
+
+// An idle pooled client can emit an error (e.g. the server restarting) after
+// its query has already resolved. Without this handler that crashes the
+// whole process; log it instead and let the pool recycle the connection.
+pool.on("error", (err) => {
+  console.error("[db] unexpected error on idle client", err);
+});
 
 // psql's --csv output can't be told apart from an actual empty string once parsed —
 // a NULL column and a column holding '' both come back as "". So "was this ever
@@ -34,18 +51,19 @@ export function lit(value) {
   return "'" + s.replace(/'/g, "''") + "'";
 }
 
-export function query(sql) {
-  return new Promise((resolve, reject) => {
-    execFile(
-      "psql",
-      ["-h", PG.host, "-p", PG.port, "-U", PG.user, "-d", PG.database, "-X", "-v", "ON_ERROR_STOP=1", "--csv", "-c", sql],
-      { env: { ...process.env, PGPASSWORD: PG.password }, maxBuffer: 32 * 1024 * 1024 },
-      (err, stdout, stderr) => {
-        if (err) { reject(new Error(stderr || err.message)); return; }
-        resolve(parseCsv(stdout));
-      }
-    );
-  });
+// Match psql --csv's NULL-becomes-empty-string behavior so every existing
+// caller (hasValue, `row.x || fallback`, etc.) keeps working unchanged.
+function normalizeRow(row) {
+  const out = {};
+  for (const k of Object.keys(row)) {
+    out[k] = row[k] === null ? "" : row[k];
+  }
+  return out;
+}
+
+export async function query(sql) {
+  const result = await pool.query(sql);
+  return result.rows.map(normalizeRow);
 }
 
 export async function one(sql) {
@@ -53,7 +71,23 @@ export async function one(sql) {
   return rows[0] || null;
 }
 
-// Run several statements as a single transaction (all-or-nothing).
-export function tx(sql) {
-  return query(`BEGIN;\n${sql}\nCOMMIT;`);
+// Run several statements as a single transaction (all-or-nothing). Grabs a
+// dedicated client so BEGIN/COMMIT land on the same connection.
+export async function tx(sql) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const result = await client.query(sql);
+    await client.query("COMMIT");
+    return result.rows ? result.rows.map(normalizeRow) : [];
+  } catch (err) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {
+      // connection is already dead / transaction already aborted — nothing more to do
+    }
+    throw err;
+  } finally {
+    client.release();
+  }
 }
