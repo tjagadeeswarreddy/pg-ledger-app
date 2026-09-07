@@ -153,8 +153,20 @@ export async function getTenant(id) {
 }
 
 export async function bedIsFree(roomId, bedNo, excludeTenantId = null) {
+  // roomId/bedNo ultimately come straight from a submitted form field. If
+  // either is missing (e.g. the client-side JS that fills in the bed <select>
+  // never ran, or the field never made it into the POST body) Number(...)
+  // is NaN, and NaN interpolated unquoted into SQL isn't a value at all —
+  // Postgres reads the bareword as a *column* reference ("nan") and throws
+  // a confusing syntax error instead of a normal validation message. Catch
+  // it here, once, for every caller (createTenant, updateTenant).
+  const roomIdNum = Number(roomId);
+  const bedNoNum = Number(bedNo);
+  if (!Number.isFinite(roomIdNum) || !Number.isFinite(bedNoNum)) {
+    throw new Error("Please select both a room and a bed.");
+  }
   const excludeClause = excludeTenantId ? ` AND id != ${Number(excludeTenantId)}` : "";
-  const row = await one(`SELECT id FROM tenants WHERE room_id = ${Number(roomId)} AND bed_no = ${Number(bedNo)} AND status = 'active'${excludeClause}`);
+  const row = await one(`SELECT id FROM tenants WHERE room_id = ${roomIdNum} AND bed_no = ${bedNoNum} AND status = 'active'${excludeClause}`);
   return !row;
 }
 

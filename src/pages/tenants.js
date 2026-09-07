@@ -236,7 +236,7 @@ export async function tenantNewPage() {
 
   return `
     <div class="toolbar"><h1>Add a tenant</h1><a class="btn" href="/tenants">Cancel</a></div>
-    <form method="post" action="/tenants" class="card" style="padding:22px 24px;display:flex;flex-direction:column;gap:16px;max-width:720px;">
+    <form method="post" action="/tenants" class="card" style="padding:22px 24px;display:flex;flex-direction:column;gap:16px;max-width:720px;" id="tenantForm">
       <div class="grid2">
         <label class="field"><span>Room</span>
           <select name="roomId" id="roomSel" required><option value="">Select a room…</option>${roomOptions}</select>
@@ -267,6 +267,7 @@ export async function tenantNewPage() {
         <label class="field"><span>Rent due day of month</span><input type="number" name="rentDueDay" min="1" max="28" value="5" required></label>
       </div>
       <div class="hint" style="font-size:12.5px;color:var(--ink-faint);margin-top:-8px;">The month's due is added automatically once this day arrives. Pick 1–28 so it lands every month, including February.</div>
+      <div id="formError" style="display:none;color:var(--bad);font-size:12.5px;margin-top:-8px;"></div>
       <div><button type="submit" class="btn primary">Add tenant</button></div>
     </form>
     <script>
@@ -275,6 +276,8 @@ export async function tenantNewPage() {
       const bedSel = document.getElementById('bedSel');
       const rentInput = document.getElementById('rentInput');
       const depositInput = document.getElementById('depositInput');
+      const tenantForm = document.getElementById('tenantForm');
+      const formError = document.getElementById('formError');
       roomSel.addEventListener('change', () => {
         const info = roomBeds[roomSel.value];
         bedSel.innerHTML = '';
@@ -291,6 +294,22 @@ export async function tenantNewPage() {
         if (sel) {
           rentInput.value = sel.dataset.rent;
           depositInput.value = 2000;
+        }
+      });
+
+      // Belt-and-suspenders on top of the native "required" attribute: the
+      // Bed dropdown only gets its options once Room's change handler above
+      // has run, so if that never fired for any reason, bedSel.value is
+      // still '' here — catch it before the browser lets the form through,
+      // instead of a confusing server error after the fact.
+      tenantForm.addEventListener('submit', (e) => {
+        if (!roomSel.value || !bedSel.value) {
+          e.preventDefault();
+          formError.textContent = 'Please select a room and a bed before submitting.';
+          formError.style.display = 'block';
+          (roomSel.value ? bedSel : roomSel).focus();
+        } else {
+          formError.style.display = 'none';
         }
       });
     </script>
