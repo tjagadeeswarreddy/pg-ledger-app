@@ -612,7 +612,7 @@ export async function accountTransactions(accountId, { type } = {}) {
     LEFT JOIN payments p ON at.source = 'payment' AND at.source_id = p.id
     LEFT JOIN tenants t ON p.tenant_id = t.id
     LEFT JOIN rooms r ON t.room_id = r.id
-    WHERE at.account_id = ${Number(accountId)} ${typeFilter}
+    WHERE at.account_id = ${Number(accountId)} AND at.source = 'payment' ${typeFilter}
     ORDER BY at.txn_date DESC, at.id DESC
     LIMIT 100
   `);
