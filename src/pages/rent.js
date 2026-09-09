@@ -1,4 +1,4 @@
-import { money, pill, escapeHtml, ordinal, icon, ICON, voidPaymentCell, editPaymentCell } from "../render.js";
+import { money, pill, escapeHtml, ordinal, icon, ICON, voidPaymentCell, editPaymentCell, whatsappLink } from "../render.js";
 import * as repo from "../repo.js";
 import { hasValue } from "../db.js";
 
@@ -27,6 +27,26 @@ export async function rentPage({ year, month, floorId, accountId }) {
   for (const c of charges) {
     daysOverdueMap[c.id] = await repo.getDaysOverdue(c.id);
   }
+
+  // Sort charges: pending/unpaid at top, paid at bottom
+  charges.sort((a, b) => {
+    const expA = Number(a.expected_amount);
+    const paidA = Number(a.paid_amount);
+    const outstandingA = a.status === "waived" ? 0 : Math.max(expA - paidA, 0);
+    const isPaidA = outstandingA === 0 && paidA > 0;
+
+    const expB = Number(b.expected_amount);
+    const paidB = Number(b.paid_amount);
+    const outstandingB = b.status === "waived" ? 0 : Math.max(expB - paidB, 0);
+    const isPaidB = outstandingB === 0 && paidB > 0;
+
+    if (isPaidA !== isPaidB) {
+      return isPaidA ? 1 : -1;
+    }
+    return 0;
+  });
+
+
 
   const monthLabel = new Date(year, month - 1, 1).toLocaleDateString("en-IN", { month: "long", year: "numeric" });
   const prev = month === 1 ? { y: year - 1, m: 12 } : { y: year, m: month - 1 };
@@ -175,8 +195,13 @@ export async function rentPage({ year, month, floorId, accountId }) {
 
     return `<tr>
       <td data-label="Tenant" class="card-id-cell">
-        <a href="/tenants/${c.tenant_id}" class="card-id" style="text-decoration:none;color:inherit;">${escapeHtml(c.full_name)}</a>
-        <div class="card-id-sub">Room ${escapeHtml(c.room_no)}</div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div>
+            <a href="/tenants/${c.tenant_id}" class="card-id" style="text-decoration:none;color:inherit;">${escapeHtml(c.full_name)}</a>
+            <div class="card-id-sub">Room ${escapeHtml(c.room_no)}</div>
+          </div>
+          ${whatsappLink(c.phone)}
+        </div>
       </td>
       <td class="mono hide-mobile" data-label="Room">${escapeHtml(c.room_no)}</td>
       ${expectedCell}

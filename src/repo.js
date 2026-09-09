@@ -551,6 +551,17 @@ export async function accountsIncomeSummary() {
   return { rows, total };
 }
 
+// Individual payment details with tenant info for the Accounts income table
+export async function accountIncomePayments(accountId) {
+  return query(`
+    SELECT at.id, at.account_id, at.amount, at.txn_date, t.full_name, r.room_no
+    FROM account_transactions at
+    LEFT JOIN tenants t ON at.source_id = t.id AND at.source = 'rent'
+    LEFT JOIN rooms r ON t.room_id = r.id
+    WHERE at.account_id = ${Number(accountId)} AND at.type = 'credit'
+    ORDER BY at.txn_date DESC`);
+}
+
 export async function createAccount({ name, type, openingBalance }) {
   return one(`INSERT INTO accounts(name, type, opening_balance) VALUES (${lit(name)}, ${lit(type)}, ${Number(openingBalance) || 0}) RETURNING *`);
 }
@@ -671,10 +682,12 @@ export async function dashboardKpis(year, month) {
       (SELECT COALESCE(sum(sharing_type), 0) FROM rooms) AS total_beds`);
 
   const accountsTotal = await one(`
-    SELECT COALESCE(sum(a.opening_balance +
-      COALESCE((SELECT sum(amount) FROM account_transactions WHERE account_id = a.id AND type = 'credit'), 0) -
-      COALESCE((SELECT sum(amount) FROM account_transactions WHERE account_id = a.id AND type = 'debit'), 0)), 0) AS total
-    FROM accounts a WHERE a.is_active`);
+    SELECT COALESCE(sum(at.amount), 0) AS total
+    FROM account_transactions at
+    JOIN accounts a ON a.id = at.account_id
+    WHERE a.is_active AND at.type = 'credit'
+      AND EXTRACT(YEAR FROM at.txn_date) = ${Number(year)}
+      AND EXTRACT(MONTH FROM at.txn_date) = ${Number(month)}`);
 
   return {
     expected: Number(collected.expected),

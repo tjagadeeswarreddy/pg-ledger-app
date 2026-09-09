@@ -11,13 +11,31 @@ export async function accountsPage() {
     monthlyStatsMap[a.id] = await repo.getAccountMonthlyStats(a.id);
   }
 
+  // Fetch individual payment details for each account
+  const incomePaymentsMap = {};
+  for (const r of incomeRows) {
+    incomePaymentsMap[r.id] = await repo.accountIncomePayments(r.id);
+  }
+
   const incomeTableRows = incomeRows.map((r) => {
     const active = r.is_active === "t" || r.is_active === true;
-    return `<tr>
+    const payments = incomePaymentsMap[r.id] || [];
+
+    // Build payment rows for this account
+    const paymentRows = payments.map((p) => `
+      <tr style="background:var(--bg-faint);">
+        <td data-label="Payment">${escapeHtml(p.full_name || "Non-rent credit")} ${p.room_no ? `<span class="lbl">· Room ${escapeHtml(p.room_no)}</span>` : ""}</td>
+        <td data-label="Date" class="hide-mobile">${p.txn_date}</td>
+        <td class="num" data-label="Amount">${money(p.amount)}</td>
+      </tr>`).join("");
+
+    const accountRow = `<tr>
       <td data-label="Account"><a href="/accounts/${r.id}?type=credit">${escapeHtml(r.name)}</a>${active ? "" : " " + pill("Inactive", "neutral")}</td>
       <td data-label="Type" class="hide-mobile">${escapeHtml(r.type)}</td>
       <td class="num" data-label="Total income">${money(r.income)}</td>
     </tr>`;
+
+    return accountRow + paymentRows;
   }).join("");
 
   const cards = accounts.map((a) => {
@@ -90,7 +108,7 @@ export async function accountsPage() {
     <div class="card" style="padding:6px 20px;margin-bottom:20px;">
       <h2 style="padding-top:12px;">Income by account</h2>
       <table class="responsive">
-        <thead><tr><th>Account</th><th class="hide-mobile">Type</th><th class="num">Total income</th></tr></thead>
+        <thead><tr><th>Account / Payment</th><th class="hide-mobile">Date</th><th class="num">Amount</th></tr></thead>
         <tbody>${incomeTableRows || `<tr><td colspan="3" style="color:var(--ink-faint);padding:14px 0;">No accounts yet.</td></tr>`}</tbody>
         ${incomeRows.length ? `<tfoot><tr style="font-weight:600;border-top:1px solid var(--line);">
           <td data-label="Total">Total</td><td class="hide-mobile"></td><td class="num" data-label="Total">${money(incomeTotal)}</td>

@@ -286,8 +286,8 @@ export async function tenantNewPage() {
           const opt = document.createElement('option');
           opt.value = b;
           const taken = info.occupied.includes(b);
-          opt.textContent = 'Bed ' + b + (taken ? ' (occupied)' : '');
-          if (taken) opt.disabled = true;
+          if (taken) continue;  // Skip occupied beds entirely
+          opt.textContent = 'Bed ' + b;
           bedSel.appendChild(opt);
         }
         const sel = roomSel.selectedOptions[0];
@@ -383,9 +383,10 @@ export async function tenantEditPage(id) {
           const opt = document.createElement('option');
           opt.value = b;
           const taken = info.occupied.includes(b);
-          opt.textContent = 'Bed ' + b + (taken ? ' (occupied)' : '');
-          if (taken) opt.disabled = true;
-          if (String(roomSel.value) === '${t.room_id}' && b === currentBed) opt.selected = true;
+          const isCurrentBed = String(roomSel.value) === '${t.room_id}' && b === currentBed;
+          if (taken && !isCurrentBed) continue;  // Skip occupied beds except current tenant's bed
+          opt.textContent = 'Bed ' + b + (taken ? ' (current)' : '');
+          if (isCurrentBed) opt.selected = true;
           bedSel.appendChild(opt);
         }
         if (autofillRent) {
