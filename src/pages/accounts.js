@@ -134,6 +134,7 @@ export async function accountDetailPage(id, { type } = {}) {
       <td data-label="Date">${t.txn_date}</td>
       <td data-label="Type">${t.type === "credit" ? pill("Credit", "good") : pill("Debit", "bad")}</td>
       <td class="num" data-label="Amount">${money(t.amount)}</td>
+      <td data-label="Tenant">${t.tenant_name ? `${escapeHtml(t.tenant_name)} <span class="lbl">· Room ${escapeHtml(t.room_no)}</span>` : "-"}</td>
       <td data-label="Source">${escapeHtml(t.source)}</td>
       <td data-label="Note">${escapeHtml(t.note || "")}</td>
     </tr>`).join("");
@@ -155,8 +156,8 @@ export async function accountDetailPage(id, { type } = {}) {
     <div class="tabs">${tabs}</div>
     <div class="card" style="padding:6px 20px;">
       <table class="responsive">
-        <thead><tr><th>Date</th><th>Type</th><th class="num">Amount</th><th>Source</th><th>Note</th></tr></thead>
-        <tbody>${rows || `<tr><td colspan="5" style="color:var(--ink-faint);padding:14px 0;">No transactions yet.</td></tr>`}</tbody>
+        <thead><tr><th>Date</th><th>Type</th><th class="num">Amount</th><th>Tenant</th><th>Source</th><th>Note</th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="6" style="color:var(--ink-faint);padding:14px 0;">No transactions yet.</td></tr>`}</tbody>
       </table>
     </div>
   `;

@@ -597,7 +597,25 @@ export async function reactivateAccount(id) {
 
 export async function accountTransactions(accountId, { type } = {}) {
   const typeFilter = type === "credit" || type === "debit" ? `AND type = ${lit(type)}` : "";
-  return query(`SELECT * FROM account_transactions WHERE account_id = ${Number(accountId)} ${typeFilter} ORDER BY txn_date DESC, id DESC LIMIT 100`);
+  return query(`
+    SELECT 
+      at.*,
+      CASE 
+        WHEN at.source = 'payment' AND at.source_id IS NOT NULL THEN t.full_name
+        ELSE NULL
+      END AS tenant_name,
+      CASE 
+        WHEN at.source = 'payment' AND at.source_id IS NOT NULL THEN r.room_no
+        ELSE NULL
+      END AS room_no
+    FROM account_transactions at
+    LEFT JOIN payments p ON at.source = 'payment' AND at.source_id = p.id
+    LEFT JOIN tenants t ON p.tenant_id = t.id
+    LEFT JOIN rooms r ON t.room_id = r.id
+    WHERE at.account_id = ${Number(accountId)} ${typeFilter}
+    ORDER BY at.txn_date DESC, at.id DESC
+    LIMIT 100
+  `);
 }
 
 // ---------- Expenses ----------
