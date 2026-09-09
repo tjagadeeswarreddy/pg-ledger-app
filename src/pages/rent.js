@@ -252,7 +252,7 @@ export async function rentPage({ year, month, floorId, accountId }) {
         <div class="rcard-figs">
           <span>Exp <b>${money(exp)}</b></span>
           <span>Paid <b>${money(paid)}</b></span>
-          <span style="color:${outstanding > 0 ? "var(--bad)" : "var(--ink-faint)"};">Out <b>${money(outstanding)}</b></span>
+          <span style="color:${outstanding > 0 ? "var(--bad)" : "var(--ink-faint)"};">Due <b>${money(outstanding)}</b></span>
         </div>
         <div class="rcard-actions">${mActionsCell}</div>
       </div>`);
@@ -334,7 +334,7 @@ export async function rentPage({ year, month, floorId, accountId }) {
           <span>Total</span>
           <span>Exp <b>${money(expTotal)}</b></span>
           <span>Paid <b>${money(paidTotal)}</b></span>
-          <span style="color:${outstandingTotal ? "var(--bad)" : "var(--ink-faint)"};">Out <b>${money(outstandingTotal)}</b></span>
+          <span style="color:${outstandingTotal ? "var(--bad)" : "var(--ink-faint)"};">Due <b>${money(outstandingTotal)}</b></span>
         </div>` : ""}
       </div>
     </div>
