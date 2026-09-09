@@ -531,7 +531,18 @@ export const BASE_CSS = `
        once, with every figure the desktop table shows still present. ---- */
     .rent-table-wrap { display:none; }
     .rent-cards { display:flex; flex-direction:column; gap:8px; }
-    .rcard { border:1px solid var(--line); border-radius:8px; padding:10px 11px; display:flex; flex-direction:column; gap:5px; }
+    .rcard { border:1px solid var(--line); border-left-width:3px; border-radius:8px; padding:10px 11px 10px 9px;
+      display:flex; flex-direction:column; gap:5px; }
+    /* Left-edge color accent, keyed off the same good/warn/bad/neutral
+       classification as the status pill — lets a scan down the list flag
+       overdue tenants (red) vs due-today/partial (amber) vs settled (green)
+       without reading every pill. Neutral (waived, not due yet) keeps the
+       plain border so it doesn't visually compete with the ones needing
+       action. */
+    .rcard-accent-good { border-left-color:var(--good); }
+    .rcard-accent-warn { border-left-color:var(--warn); }
+    .rcard-accent-bad { border-left-color:var(--bad); }
+    .rcard-accent-neutral { border-left-color:var(--line); }
     .rcard-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
     .rcard-name { font-weight:700; font-size:14px; color:var(--ink); text-decoration:none; }
     .rcard-sub { display:flex; align-items:center; gap:2px; font-size:12px; color:var(--ink-faint); }

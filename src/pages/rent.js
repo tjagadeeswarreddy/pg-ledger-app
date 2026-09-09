@@ -82,23 +82,30 @@ export async function rentPage({ year, month, floorId, accountId }) {
     const outstanding = c.status === "waived" ? 0 : Math.max(exp - paid, 0);
     if (c.status !== "waived") { expTotal += exp; paidTotal += paid; }
 
-    let statusPill;
-    if (c.status === "waived") statusPill = pill("Waived", "neutral");
-    else if (outstanding === 0) statusPill = pill("Paid", "good");
-    else if (paid > 0) statusPill = pill("Partial", "warn");
+    // statusKind drives the mobile card's left-edge color accent (see
+    // .rcard-accent-* in BASE_CSS) — same good/warn/bad/neutral classification
+    // already used for the pill, so a card reads at a glance while scrolling
+    // without having to read the pill text itself.
+    let statusPill, statusKind;
+    if (c.status === "waived") { statusKind = "neutral"; statusPill = pill("Waived", statusKind); }
+    else if (outstanding === 0) { statusKind = "good"; statusPill = pill("Paid", statusKind); }
+    else if (paid > 0) { statusKind = "warn"; statusPill = pill("Partial", statusKind); }
     else {
       // outstanding > 0 and paid === 0 - show status based on due date
       const daysOverdue = daysOverdueMap[c.id] || 0;
       if (daysOverdue > 0) {
         // Past due date
         const label = `Overdue ${daysOverdue}d`;
-        statusPill = pill(label, "bad");
+        statusKind = "bad";
+        statusPill = pill(label, statusKind);
       } else if (daysOverdue === 0) {
         // Due today
-        statusPill = pill("Due", "warn");
+        statusKind = "warn";
+        statusPill = pill("Due", statusKind);
       } else {
         // Due in future
-        statusPill = pill("Not due", "neutral");
+        statusKind = "neutral";
+        statusPill = pill("Not due", statusKind);
       }
     }
 
@@ -233,7 +240,7 @@ export async function rentPage({ year, month, floorId, accountId }) {
     // (editing the expected amount, a multi-account paid breakdown).
     const mActionsCell = buildActionsCell("m-");
     cardsArr.push(`
-      <div class="rcard">
+      <div class="rcard rcard-accent-${statusKind}">
         <div class="rcard-top">
           <a href="/tenants/${c.tenant_id}" class="rcard-name">${escapeHtml(c.full_name)}</a>
           ${statusPill}
