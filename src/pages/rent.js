@@ -201,7 +201,6 @@ export async function rentPage({ year, month, floorId, accountId }) {
             <a href="/tenants/${c.tenant_id}" class="card-id" style="text-decoration:none;color:inherit;">${escapeHtml(c.full_name)}</a>
             <div class="card-id-sub">Room ${escapeHtml(c.room_no)}</div>
           </div>
-          <div class="show-mobile">${whatsappLink(c.phone)}</div>
         </div>
       </td>
       <td class="mono hide-mobile" data-label="Room">${escapeHtml(c.room_no)}</td>

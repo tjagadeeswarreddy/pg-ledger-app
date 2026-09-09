@@ -11,31 +11,14 @@ export async function accountsPage() {
     monthlyStatsMap[a.id] = await repo.getAccountMonthlyStats(a.id);
   }
 
-  // Fetch individual payment details for each account
-  const incomePaymentsMap = {};
-  for (const r of incomeRows) {
-    incomePaymentsMap[r.id] = await repo.accountIncomePayments(r.id);
-  }
-
   const incomeTableRows = incomeRows.map((r) => {
     const active = r.is_active === "t" || r.is_active === true;
-    const payments = incomePaymentsMap[r.id] || [];
 
-    // Build payment rows for this account
-    const paymentRows = payments.map((p) => `
-      <tr style="background:var(--bg-faint);">
-        <td data-label="Payment">${escapeHtml(p.full_name || "Non-rent credit")} ${p.room_no ? `<span class="lbl">· Room ${escapeHtml(p.room_no)}</span>` : ""}</td>
-        <td data-label="Date" class="hide-mobile">${p.txn_date}</td>
-        <td class="num" data-label="Amount">${money(p.amount)}</td>
-      </tr>`).join("");
-
-    const accountRow = `<tr>
+    return `<tr>
       <td data-label="Account"><a href="/accounts/${r.id}?type=credit">${escapeHtml(r.name)}</a>${active ? "" : " " + pill("Inactive", "neutral")}</td>
       <td data-label="Type" class="hide-mobile">${escapeHtml(r.type)}</td>
       <td class="num" data-label="Total income">${money(r.income)}</td>
     </tr>`;
-
-    return accountRow + paymentRows;
   }).join("");
 
   const cards = accounts.map((a) => {
