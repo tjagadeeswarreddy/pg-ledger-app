@@ -451,6 +451,7 @@ export const BASE_CSS = `
   .acct-breakdown .acct-row { display:flex; justify-content:space-between; gap:14px; }
 
   .tenant-cards { display:none; }
+  .rent-cards { display:none; }
   /* ---- Responsive tables: data-label + display:block turns rows into stacked
      cards on narrow screens, no JavaScript involved. ---- */
   @media (max-width: 700px) {
@@ -508,6 +509,40 @@ export const BASE_CSS = `
     .tcard-name { font-weight:700; font-size:14.5px; color:var(--ink); text-decoration:none; }
     .tcard-row2 { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:12px;
       color:var(--ink-soft); text-decoration:none; }
+
+    /* ---- Generic mobile-only visibility utilities. A couple of pages
+       (Rent Collection's header, its "view by account" FAB) already used
+       these class names expecting a media-query override that never
+       existed — table.responsive's own .hide-mobile only ever applied to a
+       <td> inside a responsive table. Defining them generically here makes
+       any element respect "hide on phones" / "show only on phones". ---- */
+    .hide-mobile { display:none !important; }
+    .show-mobile { display:block !important; }
+
+    /* ---- Compact rent-collection list for mobile, same idea as
+       .tenant-cards above: the regular responsive table turns each tenant's
+       due into a 6-line stacked card (tenant, room, expected, paid,
+       outstanding, status, actions), which only fits one card at a time on
+       a phone. .rent-cards replaces that with a dense 4-line card — name +
+       status, then room + WhatsApp (icon after the name's own info here,
+       unlike the desktop table where it sits before the name), then the
+       expected/paid/outstanding figures on one compact line, then the
+       Pay/Waive/History actions — so several tenants fit on screen at
+       once, with every figure the desktop table shows still present. ---- */
+    .rent-table-wrap { display:none; }
+    .rent-cards { display:flex; flex-direction:column; gap:8px; }
+    .rcard { border:1px solid var(--line); border-radius:8px; padding:10px 11px; display:flex; flex-direction:column; gap:5px; }
+    .rcard-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .rcard-name { font-weight:700; font-size:14px; color:var(--ink); text-decoration:none; }
+    .rcard-sub { display:flex; align-items:center; gap:2px; font-size:12px; color:var(--ink-faint); }
+    .rcard-figs { display:flex; flex-wrap:wrap; gap:4px 14px; font-size:12px; color:var(--ink-faint); }
+    .rcard-figs b { color:var(--ink); font-weight:600; }
+    .rcard-actions { display:flex; align-items:center; justify-content:flex-end; }
+    .rcard-actions td { display:block !important; padding:0 !important; border:none !important; }
+    .rcard-actions .row-actions { justify-content:flex-end; padding-top:4px; border-top:1px solid var(--surface-2); }
+    .rcard-total { display:flex; flex-wrap:wrap; align-items:center; gap:4px 14px; font-size:12px; font-weight:700;
+      padding:10px 11px 4px; color:var(--ink-soft); }
+    .rcard-total b { color:var(--ink); }
   }
 
   @media (max-width: 860px) {

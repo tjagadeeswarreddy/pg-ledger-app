@@ -67,7 +67,16 @@ export async function rentPage({ year, month, floorId, accountId }) {
   // opening a separate form elsewhere on the page. A "view full history"
   // icon still links to the fuller /rent/charge/:id page for void-a-payment
   // and the complete payment log for this charge.
-  const rows = charges.map((c) => {
+  // Desktop table rows and the compact mobile card list are built together,
+  // from the same per-charge computation, so they never drift out of sync.
+  // Interactive bits (the expected-amount inline edit, the Pay/Waive
+  // popovers) exist in BOTH markups at once in the DOM — CSS just shows one
+  // and hides the other by screen width — so each needs its own checkbox-
+  // toggle ids; buildExpectedCell/buildActionsCell take an id prefix so the
+  // mobile copies ("m-...") never collide with the desktop ones.
+  const rowsArr = [];
+  const cardsArr = [];
+  for (const c of charges) {
     const exp = Number(c.expected_amount);
     const paid = Number(c.paid_amount);
     const outstanding = c.status === "waived" ? 0 : Math.max(exp - paid, 0);
@@ -102,12 +111,12 @@ export async function rentPage({ year, month, floorId, accountId }) {
 
     // Expected cell: plain text for a waived charge (nothing to edit), otherwise
     // an inline pencil -> input -> checkmark/cancel edit-in-place.
-    let expectedCell;
-    if (c.status === "waived") {
-      expectedCell = `<td class="num" data-label="Expected">${money(exp)}</td>`;
-    } else {
-      const cb = `ed-${c.id}`;
-      expectedCell = `<td class="num" data-label="Expected">
+    function buildExpectedCell(idPrefix) {
+      if (c.status === "waived") {
+        return `<td class="num" data-label="Expected">${money(exp)}</td>`;
+      }
+      const cb = `${idPrefix}ed-${c.id}`;
+      return `<td class="num" data-label="Expected">
         <div class="inline-edit">
           <input type="checkbox" id="${cb}" class="ie-toggle">
           <div class="ie-view">
@@ -144,9 +153,9 @@ export async function rentPage({ year, month, floorId, accountId }) {
 
     // Actions cell: icon-triggered Pay / Waive popovers (waived charges get a
     // one-click Reinstate icon instead), plus the history link.
-    let actionsCell;
-    if (c.status === "waived") {
-      actionsCell = `<td data-label="">
+    function buildActionsCell(idPrefix) {
+      if (c.status === "waived") {
+        return `<td data-label="">
         <div class="row-actions">
           <form method="post" action="/rent/${c.id}/reinstate" style="display:inline;">
             <input type="hidden" name="year" value="${year}"><input type="hidden" name="month" value="${month}">
@@ -156,9 +165,9 @@ export async function rentPage({ year, month, floorId, accountId }) {
           ${historyLink}
         </div>
       </td>`;
-    } else {
-      const payCb = `pay-${c.id}`, waiveCb = `wv-${c.id}`;
-      actionsCell = `<td data-label="">
+      }
+      const payCb = `${idPrefix}pay-${c.id}`, waiveCb = `${idPrefix}wv-${c.id}`;
+      return `<td data-label="">
         <div class="row-actions">
           <div class="inline-edit">
             <input type="checkbox" id="${payCb}" class="ie-toggle">
@@ -193,10 +202,13 @@ export async function rentPage({ year, month, floorId, accountId }) {
       </td>`;
     }
 
-    return `<tr>
+    const expectedCell = buildExpectedCell("");
+    const actionsCell = buildActionsCell("");
+
+    rowsArr.push(`<tr>
       <td data-label="Tenant" class="card-id-cell">
         <div style="display:flex;align-items:center;gap:6px;">
-          <div class="hide-mobile">${whatsappLink(c.phone)}</div>
+          <div>${whatsappLink(c.phone)}</div>
           <div>
             <a href="/tenants/${c.tenant_id}" class="card-id" style="text-decoration:none;color:inherit;">${escapeHtml(c.full_name)}</a>
             <div class="card-id-sub">Room ${escapeHtml(c.room_no)}</div>
@@ -209,8 +221,37 @@ export async function rentPage({ year, month, floorId, accountId }) {
       <td class="num" data-label="Outstanding" style="color:${outstanding > 0 ? "var(--bad)" : "var(--ink-faint)"};">${money(outstanding)}</td>
       <td data-label="Status">${statusPill}</td>
       ${actionsCell}
-    </tr>`;
-  }).join("");
+    </tr>`);
+
+    // ---- Compact mobile-only card (see .rcard in BASE_CSS) ----
+    // Same data as the desktop row above, laid out as a dense 4-line card
+    // instead of a 6-line stacked table row, so several tenants fit on
+    // screen at once. Name + status share a line; room + WhatsApp share the
+    // next (icon reads right after the name's own info, not before it, per
+    // how mobile should differ from desktop); Pay/Waive stay one tap away,
+    // with History opening the full detail page for anything not shown here
+    // (editing the expected amount, a multi-account paid breakdown).
+    const mActionsCell = buildActionsCell("m-");
+    cardsArr.push(`
+      <div class="rcard">
+        <div class="rcard-top">
+          <a href="/tenants/${c.tenant_id}" class="rcard-name">${escapeHtml(c.full_name)}</a>
+          ${statusPill}
+        </div>
+        <div class="rcard-sub">
+          <span>Room ${escapeHtml(c.room_no)}</span>
+          ${whatsappLink(c.phone)}
+        </div>
+        <div class="rcard-figs">
+          <span>Exp <b>${money(exp)}</b></span>
+          <span>Paid <b>${money(paid)}</b></span>
+          <span style="color:${outstanding > 0 ? "var(--bad)" : "var(--ink-faint)"};">Out <b>${money(outstanding)}</b></span>
+        </div>
+        <div class="rcard-actions">${mActionsCell}</div>
+      </div>`);
+  }
+  const rows = rowsArr.join("");
+  const cards = cardsArr.join("");
 
   const outstandingTotal = Math.max(expTotal - paidTotal, 0);
 
@@ -273,11 +314,22 @@ export async function rentPage({ year, month, floorId, accountId }) {
     </div>
     <div class="tabs">${floorTabs}</div>
     <div class="card" style="padding:6px 20px;">
-      <table class="responsive">
-        <thead><tr><th>Tenant</th><th>Room</th><th class="num">Expected</th><th class="num">Paid</th><th class="num">Outstanding</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody>${rows || `<tr><td colspan="7" style="color:var(--ink-faint);padding:14px 0;">No active tenants on this floor.</td></tr>`}</tbody>
-        ${charges.length ? `<tfoot><tr style="font-weight:700;"><td colspan="2" data-label="">Total</td><td class="num" data-label="Expected">${money(expTotal)}</td><td class="num" data-label="Paid">${money(paidTotal)}</td><td class="num" data-label="Outstanding" style="color:${outstandingTotal ? "var(--bad)" : "var(--ink-faint)"};">${money(outstandingTotal)}</td><td colspan="2" data-label=""></td></tr></tfoot>` : ""}
-      </table>
+      <div class="rent-table-wrap">
+        <table class="responsive">
+          <thead><tr><th>Tenant</th><th>Room</th><th class="num">Expected</th><th class="num">Paid</th><th class="num">Outstanding</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>${rows || `<tr><td colspan="7" style="color:var(--ink-faint);padding:14px 0;">No active tenants on this floor.</td></tr>`}</tbody>
+          ${charges.length ? `<tfoot><tr style="font-weight:700;"><td colspan="2" data-label="">Total</td><td class="num" data-label="Expected">${money(expTotal)}</td><td class="num" data-label="Paid">${money(paidTotal)}</td><td class="num" data-label="Outstanding" style="color:${outstandingTotal ? "var(--bad)" : "var(--ink-faint)"};">${money(outstandingTotal)}</td><td colspan="2" data-label=""></td></tr></tfoot>` : ""}
+        </table>
+      </div>
+      <div class="rent-cards">
+        ${cards || `<div style="color:var(--ink-faint);padding:14px 4px;">No active tenants on this floor.</div>`}
+        ${charges.length ? `<div class="rcard-total">
+          <span>Total</span>
+          <span>Exp <b>${money(expTotal)}</b></span>
+          <span>Paid <b>${money(paidTotal)}</b></span>
+          <span style="color:${outstandingTotal ? "var(--bad)" : "var(--ink-faint)"};">Out <b>${money(outstandingTotal)}</b></span>
+        </div>` : ""}
+      </div>
     </div>
     ${notDueYet.length ? `
     <div style="margin-top:18px;">
